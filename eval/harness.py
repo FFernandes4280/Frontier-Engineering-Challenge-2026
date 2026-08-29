@@ -3,7 +3,7 @@
 import os
 import json
 import asyncio
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -81,8 +81,8 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
             }
         )
         results.append(result)
-        # Courteous 1.5s delay to stay within free-tier 15 RPM
-        await asyncio.sleep(1.5)
+        # Courteous delay between requests
+        await asyncio.sleep(1.2)
 
     return results
 
@@ -91,10 +91,15 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
 def run(
     runner: str = typer.Option("both", "--runner", "-r", help="Runner: baseline, advanced, or both"),
     dataset: str = typer.Option("eval/dataset/cases.json", "--dataset", "-d", help="Dataset path"),
-    output: str = typer.Option("eval/benchmark_results.json", "--output", "-o", help="Output JSON path")
+    output: str = typer.Option("eval/benchmark_results.json", "--output", "-o", help="Output JSON path"),
+    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of test cases to evaluate (e.g. 2)")
 ):
     """Executes the benchmark and displays the official comparative table."""
     cases = load_dataset(dataset)
+    if limit and limit > 0:
+        cases = cases[:limit]
+        console.print(f"[yellow]⚠️ Limiting benchmark evaluation to the first {limit} test cases.[/yellow]")
+
     runners_to_run = ["baseline", "advanced"] if runner == "both" else [runner]
 
     all_summaries = {}
