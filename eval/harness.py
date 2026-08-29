@@ -27,7 +27,7 @@ def load_dataset(dataset_path: str = "eval/dataset/cases.json") -> List[Dict[str
 
 
 async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> List[EvaluationResult]:
-    """Executes the benchmark for a specific runner across all test cases."""
+    """Executes the benchmark for a specific runner across all test cases with progress feedback."""
     results: List[EvaluationResult] = []
 
     if runner_type == "baseline":
@@ -35,7 +35,7 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
     else:
         runner = HolisticVettingOrchestrator()
 
-    for item in cases:
+    for idx, item in enumerate(cases):
         spec_dict = dict(item["spec"])
         if "ground_truth_flaw" not in spec_dict:
             spec_dict["ground_truth_flaw"] = item.get("ground_truth_flaw", "Undisclosed flaw")
@@ -45,6 +45,8 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
         spec = ScenarioSpec.model_validate(spec_dict)
         submission = CandidateSubmission.model_validate(item["submission"])
         ground_truth = item.get("human_senior_verdict", {})
+
+        console.print(f"  [dim][{idx+1:02d}/{len(cases):02d}][/dim] Evaluating [cyan]{item['title']}[/cyan] ({spec.github_repo})...")
 
         # Run evaluation
         dossier, logger = await runner.evaluate_submission(submission, spec)
@@ -57,6 +59,9 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
         score_error = abs(dossier.overall_vetting_score - ground_truth.get("ground_truth_score", 70.0))
         accuracy_score = max(0.0, 1.0 - (score_error / 100.0))
 
+        status_emoji = "✅" if decision_correct else "❌"
+        console.print(f"      {status_emoji} Score: [bold]{dossier.overall_vetting_score:.1f}[/bold] (Ground Truth: {ground_truth.get('ground_truth_score', '-')}) | Recommendation: {dossier.recommendation.value}")
+
         result = EvaluationResult(
             case_id=item["case_id"],
             runner_type=runner_type,
@@ -68,6 +73,7 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
             human_time_estimated_sec=1800.0 if decision_correct else 300.0,
             details={
                 "title": item["title"],
+                "github_repo": spec.github_repo,
                 "predicted_score": dossier.overall_vetting_score,
                 "ground_truth_score": ground_truth.get("ground_truth_score"),
                 "recommendation": dossier.recommendation.value,
@@ -75,6 +81,8 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
             }
         )
         results.append(result)
+        # Courteous 1.5s delay to stay within free-tier 15 RPM
+        await asyncio.sleep(1.5)
 
     return results
 
