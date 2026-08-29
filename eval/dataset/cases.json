@@ -1,0 +1,72 @@
+[
+  {
+    "case_id": "case_01",
+    "title": "Sample Case 1",
+    "difficulty": "standard",
+    "input": "Task input for scenario 1",
+    "expected_output": "Expected target output for scenario 1"
+  },
+  {
+    "case_id": "case_02",
+    "title": "Sample Case 2",
+    "difficulty": "standard",
+    "input": "Task input for scenario 2",
+    "expected_output": "Expected target output for scenario 2"
+  },
+  {
+    "case_id": "case_03",
+    "title": "Sample Case 3",
+    "difficulty": "standard",
+    "input": "Task input for scenario 3",
+    "expected_output": "Expected target output for scenario 3"
+  },
+  {
+    "case_id": "case_04",
+    "title": "Sample Case 4",
+    "difficulty": "standard",
+    "input": "Task input for scenario 4",
+    "expected_output": "Expected target output for scenario 4"
+  },
+  {
+    "case_id": "case_05",
+    "title": "Sample Case 5",
+    "difficulty": "standard",
+    "input": "Task input for scenario 5",
+    "expected_output": "Expected target output for scenario 5"
+  },
+  {
+    "case_id": "case_06",
+    "title": "Sample Case 6",
+    "difficulty": "standard",
+    "input": "Task input for scenario 6",
+    "expected_output": "Expected target output for scenario 6"
+  },
+  {
+    "case_id": "case_07",
+    "title": "Sample Case 7",
+    "difficulty": "standard",
+    "input": "Task input for scenario 7",
+    "expected_output": "Expected target output for scenario 7"
+  },
+  {
+    "case_id": "case_08",
+    "title": "Sample Case 8",
+    "difficulty": "standard",
+    "input": "Task input for scenario 8",
+    "expected_output": "Expected target output for scenario 8"
+  },
+  {
+    "case_id": "case_09",
+    "title": "Sample Case 9",
+    "difficulty": "standard",
+    "input": "Task input for scenario 9",
+    "expected_output": "Expected target output for scenario 9"
+  },
+  {
+    "case_id": "case_10",
+    "title": "Sample Case 10",
+    "difficulty": "challenging",
+    "input": "Task input for scenario 10",
+    "expected_output": "Expected target output for scenario 10"
+  }
+]
