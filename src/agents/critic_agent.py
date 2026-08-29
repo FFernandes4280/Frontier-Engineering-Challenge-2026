@@ -15,6 +15,15 @@ from src.core.domain import (
 from src.core.llm import LLMClient
 
 
+CRITIC_SYSTEM_PROMPT = """You are a Principal Software Architect and Senior Vetting Evaluator for micro1.
+Your role is to produce a rigorous, grounded, and evidence-backed technical dossier evaluating a senior software engineer's code submission.
+
+Rules for your evaluation:
+- Cite specific architectural flaws, concurrency bottlenecks, deadlocks, and codebase redundancy.
+- Return your executive summary in 3-4 sentences highlighting the primary technical decision and recommendation.
+"""
+
+
 class SeniorEngineeringCriticAgent:
     """Synthesizes all multi-agent observations into a Senior Vetting Dossier."""
 
@@ -30,7 +39,7 @@ class SeniorEngineeringCriticAgent:
         alignment_data: Dict[str, Any],
         verification_report: VerificationReport
     ) -> SeniorVettingDossier:
-        """Produces the final holistic vetting dossier."""
+        """Produces the final holistic vetting dossier with real LLM synthesis."""
         
         blast_score = alignment_data.get("blast_radius", {}).get("blast_radius_score", 1.0)
         context_score = alignment_data.get("context_alignment", {}).get("alignment_score", 1.0)
@@ -69,7 +78,6 @@ class SeniorEngineeringCriticAgent:
         overall_score = round((arch_score * 0.40) + (scalability_score * 0.40) + (code_quality_score * 0.20), 1)
         overall_score = max(0.0, min(100.0, overall_score))
 
-        # Recommendations
         if overall_score >= 85.0:
             recommendation = RecommendationType.STRONG_HIRE
         elif overall_score >= 65.0:
@@ -127,8 +135,29 @@ class SeniorEngineeringCriticAgent:
                 )
             )
 
-        executive_summary = (
-            f"Candidate {submission.candidate_id} scored {overall_score}/100 in Scenario {spec.scenario_id} ({spec.title}). "
+        # Execute real LLM call for Senior Engineering Critique
+        user_msg = (
+            f"Candidate: {submission.candidate_id}\n"
+            f"Scenario: {spec.title} ({spec.github_repo})\n"
+            f"Ground Truth Flaw in Repo: {spec.ground_truth_flaw}\n"
+            f"Diff:\n{submission.full_diff}\n"
+            f"Load Test Metrics: {load.model_dump_json()}\n"
+            f"Calculated Score: {overall_score}/100 ({recommendation.value})\n"
+            f"Findings: {json.dumps(flaws)}\n"
+            f"Summarize the technical decision and final recommendation."
+        )
+
+        llm_res = await self.llm_client.acomplete(
+            messages=[
+                {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
+                {"role": "user", "content": user_msg}
+            ],
+            model=self.model,
+            temperature=0.2
+        )
+
+        executive_summary = llm_res.content.strip() if llm_res.content else (
+            f"Candidate scored {overall_score}/100 in Scenario {spec.scenario_id}. "
             f"Architecture: {arch_score}%, Scalability: {scalability_score}%, Code Quality: {code_quality_score}%. "
             f"Recommendation: {recommendation.value}."
         )

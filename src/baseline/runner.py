@@ -1,6 +1,7 @@
 """Canonical Baseline Runner: Single-Prompt Monolithic LLM Evaluator."""
 
 import os
+import re
 import uuid
 from typing import Tuple
 from src.core.domain import ScenarioSpec, CandidateSubmission, SeniorVettingDossier, RecommendationType
@@ -10,10 +11,10 @@ from src.tracing.logger import TraceLogger
 
 BASELINE_SYSTEM_PROMPT = """You are a Senior Technical Hiring Reviewer.
 Review the candidate's Git diff for the given technical problem and provide a score between 0 and 100 with your hiring recommendation.
-Format your output as:
-Score: <0-100>
+Format your output strictly as:
+Score: <number from 0 to 100>
 Recommendation: <STRONG_HIRE|HIRE|LEAN_NO|REJECT>
-Summary: <Short evaluation>
+Summary: <Your evaluation summary in 2-3 sentences>
 """
 
 
@@ -30,7 +31,7 @@ class BaselineVettingRunner:
         submission: CandidateSubmission,
         spec: ScenarioSpec
     ) -> Tuple[SeniorVettingDossier, TraceLogger]:
-        """Evaluates the submission using a single prompt without tool execution."""
+        """Evaluates the submission using a real LLM call without tool execution."""
         run_id = str(uuid.uuid4())[:8]
         logger = TraceLogger(
             run_id=run_id,
@@ -52,45 +53,51 @@ class BaselineVettingRunner:
             input_data={"prompt": user_content, "model": self.model}
         )
 
-        # Baseline heuristic fallback if no active API key or offline testing
-        # The baseline trusts clean-looking code and unit tests, overestimating flawed solutions
+        res = await self.llm_client.acomplete(
+            messages=[
+                {"role": "system", "content": BASELINE_SYSTEM_PROMPT},
+                {"role": "user", "content": user_content}
+            ],
+            model=self.model,
+            temperature=0.2
+        )
+
+        logger.log_step(
+            event_type="LLM_CALL",
+            agent_name="BaselineMonolithicReviewer",
+            output_data={"content": res.content},
+            tokens=res.total_tokens,
+            cost_usd=res.cost_usd,
+            latency_ms=res.latency_ms
+        )
+
+        # Parse real score and recommendation from LLM response
         score = 88.0
         recommendation = RecommendationType.HIRE
-        summary = "Candidate wrote clean, readable code and all unit tests passed. Recommended for hire."
+        
+        score_match = re.search(r"Score:\s*(\d+(?:\.\d+)?)", res.content)
+        if score_match:
+            score = float(score_match.group(1))
 
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
-        if api_key and "your_" not in api_key:
-            try:
-                res = await self.llm_client.acomplete(
-                    messages=[
-                        {"role": "system", "content": BASELINE_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_content}
-                    ],
-                    model=self.model,
-                    temperature=0.2
-                )
-                logger.log_step(
-                    event_type="LLM_CALL",
-                    agent_name="BaselineMonolithicReviewer",
-                    output_data={"content": res.content},
-                    tokens=res.total_tokens,
-                    cost_usd=res.cost_usd,
-                    latency_ms=res.latency_ms
-                )
-                summary = res.content
-            except Exception:
-                pass
+        if "STRONG_HIRE" in res.content:
+            recommendation = RecommendationType.STRONG_HIRE
+        elif "LEAN_NO" in res.content:
+            recommendation = RecommendationType.LEAN_NO
+        elif "REJECT" in res.content:
+            recommendation = RecommendationType.REJECT
+        elif "HIRE" in res.content:
+            recommendation = RecommendationType.HIRE
 
         dossier = SeniorVettingDossier(
             candidate_id=submission.candidate_id,
             scenario_id=spec.scenario_id,
             overall_vetting_score=score,
             recommendation=recommendation,
-            architecture_score=85.0,
-            concurrency_scalability_score=85.0,
-            code_quality_reusability_score=90.0,
-            executive_summary=summary,
-            trade_off_analysis="Baseline review based purely on code appearance and functional test passage.",
+            architecture_score=score,
+            concurrency_scalability_score=score,
+            code_quality_reusability_score=score,
+            executive_summary=res.content,
+            trade_off_analysis="Baseline single-prompt review without dynamic load testing or AST analysis.",
             evidence_citations=[],
             primary_flaws_flagged=[]
         )
