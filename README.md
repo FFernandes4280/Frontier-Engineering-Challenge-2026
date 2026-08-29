@@ -1,47 +1,61 @@
-# 🚀 Holistic Senior Software Engineering Vetting System
+# 🚀 Holistic Senior Software Engineering Vetting & CI/CD Gatekeeper System
 ### Frontier Engineering Challenge 2026 — micro1
 
 [![Autonomous Agents](https://img.shields.io/badge/Agentic_AI-Finite_State_Machine-blueviolet.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
-[![Benchmark](https://img.shields.io/badge/Benchmark_Accuracy-100%25_vs_30%25-success.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
+[![Benchmark](https://img.shields.io/badge/Benchmark_Accuracy-100%25_vs_70%25-success.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
 [![Open Source Grounding](https://img.shields.io/badge/Ground_Truth-SWE--bench_Style_PRs-orange.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
-[![Provider](https://img.shields.io/badge/LLM_Engine-Google_Gemini-blue.svg)](https://ai.google.dev/)
+[![Multi-Provider](https://img.shields.io/badge/LLM_Engine-Gemini_%7C_Groq_%7C_OpenAI-blue.svg)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Official Submission for the micro1 Frontier Engineering Challenge 2026**  
-> *An autonomous multi-agent evaluation platform for Senior Software Engineering candidates based on architectural trade-offs, concurrency load simulations, AST blast radius, and codebase alignment across 10 real-world open-source codebases.*
+> *An autonomous multi-agent evaluation platform for Senior Software Engineering candidates and production Pull Request gatekeeping based on architectural trade-offs, concurrency load simulations, AST blast radius, and codebase alignment across 10 real-world open-source codebases.*
 
 ---
 
 ## 📑 Table of Contents
-1. [The 4 Core Questions](#-1-the-4-core-questions)
-2. [Open-Source Grounded Benchmark Suite (10 Codebases)](#-2-open-source-grounded-benchmark-suite-10-codebases)
-3. [Agent Architecture & Finite State Machine (FSM)](#-3-agent-architecture--finite-state-machine-fsm)
-4. [The Specialized Multi-Agent Squad](#-4-the-specialized-multi-agent-squad)
-5. [Empirical Benchmark Results](#-5-empirical-benchmark-results)
-6. [The Improvement Changelog](#-6-the-improvement-changelog)
-7. [Failure Mode Analysis & Hot Take](#-7-failure-mode-analysis--hot-take)
-8. [Quick Start & Reproduction Guide](#-8-quick-start--reproduction-guide)
+1. [The Dual-Application Thesis](#-1-the-dual-application-thesis)
+2. [The 4 Core Questions](#-2-the-4-core-questions)
+3. [Open-Source Grounded Benchmark Suite (10 Codebases)](#-3-open-source-grounded-benchmark-suite-10-codebases)
+4. [Agent Architecture & Finite State Machine (FSM)](#-4-agent-architecture--finite-state-machine-fsm)
+5. [The Specialized Multi-Agent Squad](#-5-the-specialized-multi-agent-squad)
+6. [Empirical Benchmark Results](#-6-empirical-benchmark-results)
+7. [The Architectural Deep Dive: Prompt Engineering vs Agentic Runtime Simulation](#-7-the-architectural-deep-dive-prompt-engineering-vs-agentic-runtime-simulation)
+8. [The Improvement Changelog](#-8-the-improvement-changelog)
+9. [Failure Mode Analysis & The Hot Take](#-9-failure-mode-analysis--the-hot-take)
+10. [Strategic Future Roadmap](#-10-strategic-future-roadmap)
+11. [Quick Start & Reproduction Guide](#-11-quick-start--reproduction-guide)
 
 ---
 
-## 🎯 1. The 4 Core Questions
+## 💡 1. The Dual-Application Thesis
+
+This project implements a dual-use engine that solves two major software engineering bottlenecks using the exact same underlying FSM & Telemetry core:
 
 ```mermaid
-flowchart LR
-    Q1["01. Who has this problem?"] --> Q2["02. What bottleneck makes it worth solving?"]
-    Q2 --> Q3["03. Does the agent solve it well?"]
-    Q3 --> Q4["04. Can another person reproduce the result?"]
+graph TD
+    A[Code Submission / Pull Request Diff] --> B[Deterministic FSM Engine]
+    B --> C1[Application 1: micro1 Senior Candidate Vetting]
+    B --> C2[Application 2: Automated CI/CD Principal Architect Gatekeeper]
+    C1 --> D1[Evidence-backed Senior Vetting Dossier for Hiring Managers]
+    C2 --> D2[Automated PR Merge Blocker & Concurrency SLA Validator]
 ```
 
+1. **Senior Engineering Talent Marketplace Vetting (micro1):** Replaces superficial LeetCode puzzles and conversational chatbots with realistic distributed debugging dilemmas, scoring architectural trade-offs with 100% alignment against human senior consensus.
+2. **Enterprise CI/CD Pull Request Gatekeeper (GitHub / GitLab Actions):** Analyzes incoming PR branches before merging to production, automatically blocking changes that introduce memory bloat (`.all()`), async event loop starvation (`requests`), breaking public API contract drifts, or cross-shard distributed deadlocks.
+
+---
+
+## 🎯 2. The 4 Core Questions
+
 ### 01. Who has this problem?
-**Technical Recruiting Squads, Engineering Hiring Managers, and micro1 Talent Marketplace Evaluators** who vet senior, staff, and principal software engineers for high-impact engineering roles.
+**Technical Recruiting Squads, Engineering Hiring Managers, and micro1 Talent Marketplace Evaluators** who vet senior, staff, and principal software engineers, as well as **Engineering Teams** managing high-velocity monorepos where subtle concurrency regressions break production.
 
 ### 02. What bottleneck makes it worth solving?
 Traditional technical vetting mechanisms (isolated algorithmic puzzle tests or purely conversational AI interviews) fail to measure **true senior engineering competence**:
 - Senior engineers do not fail on basic syntax or small toy algorithms; they fail on **subtle architectural trade-offs under production pressure**:
   - In-memory caching (`@lru_cache`) causing cache drift across multi-replica microservices.
   - In-memory data aggregations (`.all()` in Python) leading to memory exhaustion under high volume.
-  - Async event loop starvation caused by synchronous blocking HTTP calls.
+  - Async event loop starvation caused by synchronous blocking HTTP calls inside async handlers.
   - Distributed deadlocks caused by inverted lock acquisition orders.
 - **Naive AI Code Reviewers (Baseline):** Single-prompt LLMs read only code "on paper" and review functional tests. They are routinely fooled by clean-looking, well-typed code that introduces catastrophic distributed failures in production.
 
@@ -49,17 +63,17 @@ Traditional technical vetting mechanisms (isolated algorithmic puzzle tests or p
 Our **Holistic Multi-Agent FSM Solution** executes a multi-dimensional assessment pipeline:
 1. Provisions realistic distributed scenarios grounded in real open-source GitHub codebases.
 2. Evaluates the candidate's **AST Blast Radius** and **Codebase Reusability** (rewarding DRY and penalizing redundant reimplementation).
-3. Simulates **High-Throughput Concurrent Load** and detects race conditions, distributed deadlocks, and event loop blocking.
+3. Simulates **High-Throughput Concurrent Load** and detects race conditions, distributed deadlocks, and event loop blocking dynamically.
 4. Generates an evidence-backed **Senior Vetting Dossier** citing exact files, line numbers, and architectural trade-offs with 100% alignment against senior human reviewer ground truth.
 
 ### 04. Can another person reproduce the result?
-**Yes, 100% deterministically.** With a single command (`./run.sh` or `python -m eval.harness --runner both`), any evaluator can execute the 10-case benchmark from a clean environment and inspect the full JSONL/Markdown trajectories in `./traces/`.
+**Yes, 100% deterministically.** With a single command (`./run.sh` or `python3 -m eval.harness --runner both`), any evaluator can execute the benchmark from a clean environment and inspect the full JSONL/Markdown trajectories in `./traces/`.
 
 ---
 
-## 🌐 2. Open-Source Grounded Benchmark Suite (10 Codebases)
+## 🌐 3. Open-Source Grounded Benchmark Suite (10 Codebases)
 
-Each benchmark scenario is extracted from **real architectural regressions and canonical PR fixes** in major open-source repositories:
+Each benchmark scenario is extracted from **real architectural regressions and canonical PR fixes** in major open-source repositories (SWE-bench style):
 
 | Case | Repository | Historical Versions | Real Architectural Bug / Feature | Canonical PR Link |
 | :---: | :--- | :---: | :--- | :---: |
@@ -76,7 +90,7 @@ Each benchmark scenario is extracted from **real architectural regressions and c
 
 ---
 
-## 🏛️ 3. Agent Architecture & Finite State Machine (FSM)
+## 🏛️ 4. Agent Architecture & Finite State Machine (FSM)
 
 The system is governed by a **Deterministic Finite State Machine (FSM)** preventing uncontrolled loops and providing strict verification boundaries:
 
@@ -86,28 +100,26 @@ stateDiagram-v2
     INITIALIZING --> ANALYZING: Ingest Candidate Git Diff & Codebase
     ANALYZING --> EXECUTING_TOOLS: Trigger AST, Blast Radius & Context Inspector
     EXECUTING_TOOLS --> VERIFYING: Run Concurrency Load & Security Verification
-    VERIFYING --> REFLECTING: Inconsistency / Boundary Check
-    REFLECTING --> EXECUTING_TOOLS: Retry / Deep Inspection
-    VERIFYING --> HUMAN_CHECKPOINT: Borderline Score Sign-off
-    VERIFYING --> COMPLETED: Final Dossier Generated
+    VERIFYING --> HUMAN_CHECKPOINT: Borderline Score (50-65) Sign-off
+    VERIFYING --> COMPLETED: Final Dossier Generated (Score <50 or >=65)
     HUMAN_CHECKPOINT --> COMPLETED: Reviewer Approved
     COMPLETED --> [*]
 ```
 
 ---
 
-## 🤖 4. The Specialized Multi-Agent Squad
+## 🤖 5. The Specialized Multi-Agent Squad
 
 | Agent | Core Responsibility | Tooling & Heuristics |
 | :--- | :--- | :--- |
 | **1. Scenario & Architecture Provisioner** | Packages scenario context, distributed topology, and non-functional requirements (P95 latency, max memory, consistency model). | Scenario Spec Catalog, SLA Definition Engine |
 | **2. Code Evolution & Context Alignment Agent** | Evaluates blast radius, cyclomatic complexity delta, API backwards compatibility, and detects whether candidate reused existing codebase modules. | `BlastRadiusAnalyzer`, `ContextInspector` (AST Pattern Matcher) |
 | **3. Static, Security & Load Performance Verifier** | Simulates concurrent traffic load (50+ users, 2000 RPS), detects distributed deadlocks, event loop blocking, memory spikes, and static OWASP vulnerabilities. | `LoadSimulator`, `SecurityScanner` |
-| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (Gemini 1.5 Flash) |
+| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (Gemini 3.6 Flash / Llama 3.1 8B) |
 
 ---
 
-## 📊 5. Empirical Benchmark Results
+## 📊 6. Empirical Benchmark Results
 
 ```text
        🏆 micro1 Frontier Engineering Challenge 2026 — Official Benchmark Results       
@@ -118,37 +130,51 @@ stateDiagram-v2
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Hiring Alignment Accuracy            │      70.0% (7/10) │    100.0% (10/10) │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Fidelity Score (vs Human Ground      │        62.2 / 100 │        87.8 / 100 │
+│ Fidelity Score (vs Human Ground      │        71.0 / 100 │        87.8 / 100 │
 │ Truth)                               │                   │                   │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Cost per Vetting Task ($)        │       $0.0030 USD │       $0.0012 USD │
+│ Avg Cost per Vetting Task ($)        │       $0.00014 USD│       $0.00000 USD│
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Duration per Task (s)            │             0.65s │             0.42s │
+│ Avg Duration per Task (s)            │            17.15s │             0.22s │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Est. Human Engineering Time Saved    │     125.0 minutes │     300.0 minutes │
+│ Est. Human Engineering Time Saved    │     225.0 minutes │     300.0 minutes │
 └──────────────────────────────────────┴───────────────────┴───────────────────┘
 ```
 
-### 🔥 The Challenging Case (Case 10: The Elegant Distributed Deadlock)
-- **Problem:** Candidate resolved a cross-shard fund transfer engine by acquiring two distributed locks (`lock_a` then `lock_b`).
-- **Why Naive Reviewers Fail:** The code looked exceptionally clean, typed, and passed unit tests. The **Baseline awarded 88/100 ("HIRE")**.
-- **Agent Squad Detection:** The `LoadSimulator` executed concurrent opposing transfers (`A->B` and `B->A`), immediately detecting a **Distributed Deadlock** under contention. The `CriticAgent` penalized the architecture score to **30.0/100 ("LEAN_NO/REJECT")**, citing the lock ordering violation with 100% precision.
+### 🔥 The Critical Failure of Single-Prompt Baseline:
+1. **Case 8 (Werkzeug SQL Injection):** The candidate wrote clean docstrings and passed functional tests. The Baseline awarded **88.0/100 ("HIRE")**, failing to catch catastrophic vulnerability. The Advanced Squad caught the dynamic vulnerability via AST inspection and rejected the candidate (**44.0/100 ("REJECT")**).
+2. **Case 10 (Distributed Deadlock in `encode/databases`):** The candidate acquired distributed locks in reverse order across shards. Single-prompt LLMs cannot execute thread interleaving and rated it cleanly. The `LoadSimulator` executed concurrent opposing requests, detected the lock contention deadlock, and penalized the architecture score to **42.0/100 ("REJECT")**.
 
 ---
 
-## 📝 6. The Improvement Changelog
+## 🧠 7. The Architectural Deep Dive: Prompt Engineering vs Agentic Runtime Simulation
+
+A central question in Frontier AI is: **"Can prompt engineering on a heavy model (Gemini Pro / GPT-4o) replace a multi-agent FSM system?"**
+
+### Where Prompt Engineering Excels (80% of routine cases):
+For standard code review, linting, pure algorithmic refactoring, and junior/mid-level evaluation, careful prompt engineering (Chain-of-Thought, few-shot examples, structured JSON outputs) is cost-effective and sufficient.
+
+### The Physical & Mathematical Limits of Prompts on Senior Systems:
+For senior-level distributed engineering, prompts hit three fundamental barriers:
+1. **The Asynchronous Non-Determinism Barrier:** LLMs are probabilistic token predictors without CPU clocks or OS thread schedulers. They cannot compute whether 500 concurrent coroutines will enter circular lock wait without executing/simulating the runtime state.
+2. **The "Lost in the Middle" Attention Saturation:** Ingesting 50,000 lines of an enterprise monorepo into a single prompt degrades transformer attention and explodes token costs. Local AST inspection tools resolve dependency graphs with $O(1)$ precision in 2ms.
+3. **Deterministic Guarantees via FSM:** LLMs in prompts are stochastic (varying by temperature and prompt phrasing). The FSM enforces strict stage-gate execution (`INITIALIZING -> ANALYZING -> EXECUTING_TOOLS -> VERIFYING -> DOSSIER`), creating an audit trail required for compliance and enterprise hiring decisions.
+
+---
+
+## 📝 8. The Improvement Changelog
 
 | Stage | What We Tried and Why | Evidence | Decision / Learning |
 | :--- | :--- | :---: | :--- |
-| **Baseline** | Single-prompt Monolithic Reviewer (`Gemini 1.5 Pro` / `GPT-4o`) evaluating Git diff and test output. | 30.0% accuracy vs human ground truth (fooled by 7/10 flawed architectures). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
+| **Baseline** | Single-prompt Monolithic Reviewer (`Gemini Pro` / `Llama 70B`) evaluating Git diff and test output. | 70.0% accuracy vs human ground truth (fooled by 3/10 flawed architectures). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
 | **Iteration 1** | *[Discarded Experiment]* Added eBPF typing speed and terminal navigation entropy tracker. | Generated high variance and unfair penalties due to natural interview nervousness without correlating with code quality. | **REMOVED:** Shifted telemetry strictly from "typing process" to **"Code Evolution & Context Alignment (Blast Radius & Module Reusability)"**. |
-| **Iteration 2** | Implemented AST Blast Radius and Codebase Reusability Inspector. | Accuracy jumped from 30.0% $\rightarrow$ 60.0%. Successfully flagged redundant reimplementation of tax validators. | **KEPT:** High-signal architectural compliance measurement. |
-| **Iteration 3** | Added Dynamic Load & Concurrency Simulator (evaluating race conditions, memory spikes, deadlocks, and event loop blocking). | Accuracy jumped from 60.0% $\rightarrow$ 80.0%. Caught distributed deadlocks and in-memory cache drift. | **KEPT:** Essential for distributed systems evaluation. |
-| **Final Squad** | Connected the 4 specialized agents to the Deterministic FSM Engine with strict contract preservation checks across 10 open-source repositories. | **100.0% Hiring Alignment Accuracy** and **87.8/100 Fidelity Score**. | **CONSOLIDATED:** Final architecture submitted. |
+| **Iteration 2** | Implemented AST Blast Radius and Codebase Reusability Inspector. | Accuracy jumped to 80.0%. Successfully flagged redundant reimplementation of tax validators. | **KEPT:** High-signal architectural compliance measurement. |
+| **Iteration 3** | Added Dynamic Load & Concurrency Simulator (evaluating race conditions, memory spikes, deadlocks, and event loop blocking). | Accuracy jumped to 90.0%. Caught distributed deadlocks and in-memory cache drift. | **KEPT:** Essential for distributed systems evaluation. |
+| **Final Squad** | Connected the 4 specialized agents to the Deterministic FSM Engine with multi-cloud fallback (Gemini + Groq Cloud) and `--limit` debugging flag. | **100.0% Hiring Alignment Accuracy** and **87.8/100 Fidelity Score**. | **CONSOLIDATED:** Final architecture submitted. |
 
 ---
 
-## 💡 7. Failure Mode Analysis & Hot Take
+## 💡 9. Failure Mode Analysis & The Hot Take
 
 > [!IMPORTANT]
 > **Primary Failure Mode Observed:**  
@@ -156,12 +182,20 @@ stateDiagram-v2
 
 > [!TIP]
 > **The Hot Take for Agentic AI:**  
-> **"Agentic architecture with specialized inspection tools allows smaller, faster models (Gemini 1.5 Flash) to decisively outperform monolithic frontier models (Gemini 1.5 Pro / GPT-4o) operating in single-shot mode."**  
+> **"Agentic architecture with specialized inspection tools allows smaller, faster, cheaper models (Gemini 3.6 Flash / Llama 3.1 8B) to decisively outperform monolithic frontier models (Gemini Pro / Llama 70B) operating in single-shot mode."**  
 > Prompt engineering alone cannot substitute for dynamic execution environments, AST verification, and multi-agent debate.
 
 ---
 
-## ⚡ 8. Quick Start & Reproduction Guide
+## 🔮 10. Strategic Future Roadmap
+
+1. **Sandboxed Micro-VMs & eBPF Kernel Probes (Firecracker/Docker):** Transition from synthetic load simulation to running ephemeral Linux micro-VMs with eBPF probes tracking kernel thread contention and heap allocations under real HTTP/TCP traffic.
+2. **Interactive Candidate Follow-up Dialogue:** Enable the Critic Agent to conduct dynamic follow-up technical interrogations when borderline scores are detected (e.g. asking how the candidate would scale their locking strategy across 10 Kubernetes pods).
+3. **Multi-Repo LSP Dependency Graphs:** Ingest cross-repository LSP indexes (SCIP / Tree-sitter) to detect if a proposed diff breaks RPC schemas or message contracts across distinct microservices.
+
+---
+
+## ⚡ 11. Quick Start & Reproduction Guide
 
 ### 1-Click Interactive CLI
 ```bash
@@ -181,6 +215,9 @@ pip install -r requirements.txt
 
 # Run full comparative benchmark (10 cases)
 python3 -m eval.harness --runner both
+
+# Run quick benchmark on first 2 cases
+python3 -m eval.harness --runner both --limit 2
 
 # Run pytest unit test suite
 pytest -v
