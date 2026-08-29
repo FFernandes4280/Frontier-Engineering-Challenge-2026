@@ -1,0 +1,29 @@
+{
+  "run_id": "3259c41a",
+  "runner_type": "baseline",
+  "task_id": "case_06_cand_06",
+  "start_time": "2026-08-29T03:00:24.199979",
+  "end_time": "2026-08-29T03:00:24.228114",
+  "success": true,
+  "total_tokens": 0,
+  "total_cost_usd": 0.0,
+  "total_duration_ms": 0.0,
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-08-29T03:00:24.199999",
+      "event_type": "LLM_CALL",
+      "agent_name": "BaselineMonolithicReviewer",
+      "state": null,
+      "input_data": {
+        "prompt": "Problem: Trending Products Aggregator\nDescription: Serve trending products widget to 50k active concurrent visitors.\nCandidate Diff:\n--- a/src/services/trending.py\n+++ b/src/services/trending.py\n@@ -10,3 +10,5 @@\n+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)\nUnit Tests: 10/10 Passed.",
+        "model": "gemini/gemini-1.5-pro"
+      },
+      "output_data": null,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "latency_ms": 0.0,
+      "metadata": {}
+    }
+  ]
+}

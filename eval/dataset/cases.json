@@ -1,72 +1,379 @@
 [
   {
     "case_id": "case_01",
-    "title": "Sample Case 1",
-    "difficulty": "standard",
-    "input": "Task input for scenario 1",
-    "expected_output": "Expected target output for scenario 1"
+    "title": "Distributed In-Memory Cache Inconsistency",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Using @lru_cache in a multi-replica microservice environment causes state drift between nodes.",
+    "expected_optimal_solution": "Use distributed Redis cache with invalidation pub/sub.",
+    "spec": {
+      "scenario_id": "case_01",
+      "title": "Distributed In-Memory Cache Inconsistency",
+      "architecture_type": "MICROSERVICES",
+      "description": "The user service is replicated across 8 pods behind an ALB. Optimize the user profile lookup endpoint.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0,
+        "max_memory_mb": 256.0,
+        "consistency_model": "Strong"
+      },
+      "existing_codebase_map": {
+        "src/core/redis_client.py": "Distributed Redis connection pool and key-value store wrapper."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_01",
+      "scenario_id": "case_01",
+      "full_diff": "--- a/src/services/user.py\n+++ b/src/services/user.py\n@@ -10,4 +10,7 @@\n+from functools import lru_cache\n+\n+@lru_cache(maxsize=1024)\n+def get_user_profile(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()",
+      "file_changes": [
+        {
+          "path": "src/services/user.py",
+          "added_lines": 5,
+          "deleted_lines": 0,
+          "diff_content": "+from functools import lru_cache\n+@lru_cache(maxsize=1024)\n+def get_user_profile(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 45.0,
+      "primary_flaw": "Local @lru_cache breaches strong consistency SLA across multi-instance pods."
+    }
   },
   {
     "case_id": "case_02",
-    "title": "Sample Case 2",
-    "difficulty": "standard",
-    "input": "Task input for scenario 2",
-    "expected_output": "Expected target output for scenario 2"
+    "title": "In-Memory Mass Data Aggregation vs SQL Aggregation",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Loading all records with .all() and summing in Python exhausts RAM under 100k transactions.",
+    "expected_optimal_solution": "Use SQL SUM/GROUP BY with index.",
+    "spec": {
+      "scenario_id": "case_02",
+      "title": "High-Volume Ledger Aggregation",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Calculate total monthly revenue for high-volume accounts.",
+      "requirements": {
+        "latency_p95_sla_ms": 100.0,
+        "max_memory_mb": 256.0
+      },
+      "existing_codebase_map": {
+        "src/db/session.py": "SQLAlchemy session and query builder utilities."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_02",
+      "scenario_id": "case_02",
+      "full_diff": "--- a/src/services/ledger.py\n+++ b/src/services/ledger.py\n@@ -15,3 +15,6 @@\n+def calculate_revenue(account_id: int) -> float:\n+    records = db.query(Transaction).filter_by(account_id=account_id).all()\n+    return sum(item.amount for item in records)",
+      "file_changes": [
+        {
+          "path": "src/services/ledger.py",
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "diff_content": "+def calculate_revenue(account_id: int) -> float:\n+    records = db.query(Transaction).filter_by(account_id=account_id).all()\n+    return sum(item.amount for item in records)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 50.0,
+      "primary_flaw": "Memory spike to 1GB exceeding 256MB SLA."
+    }
   },
   {
     "case_id": "case_03",
-    "title": "Sample Case 3",
-    "difficulty": "standard",
-    "input": "Task input for scenario 3",
-    "expected_output": "Expected target output for scenario 3"
+    "title": "Redundant Custom Validation Reimplementation",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Ignored existing src/core/validators.py to write 100 lines of custom regex.",
+    "expected_optimal_solution": "Import and reuse validate_tax_id from src/core/validators.py.",
+    "spec": {
+      "scenario_id": "case_03",
+      "title": "International Tax ID Validation",
+      "architecture_type": "MODULAR_MONOLITH",
+      "description": "Add tax identification validation to checkout flow.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0,
+        "max_memory_mb": 128.0
+      },
+      "existing_codebase_map": {
+        "src/core/validators.py": "Standardized Pydantic schemas and regex validation utilities for all country tax IDs."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_03",
+      "scenario_id": "case_03",
+      "full_diff": "--- a/src/billing/checkout.py\n+++ b/src/billing/checkout.py\n@@ -5,2 +5,8 @@\n+import re\n+CUSTOM_REGEX = re.compile(r'^[0-9]{9,11}$')\n+def validate_tax_custom(val: str) -> bool:\n+    return bool(CUSTOM_REGEX.match(val))",
+      "file_changes": [
+        {
+          "path": "src/billing/checkout.py",
+          "added_lines": 6,
+          "deleted_lines": 0,
+          "diff_content": "+import re\n+CUSTOM_REGEX = re.compile(r'^[0-9]{9,11}$')\n+def validate_tax_custom(val: str) -> bool:\n+    return bool(CUSTOM_REGEX.match(val))"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": true,
+      "ground_truth_score": 68.0,
+      "primary_flaw": "Code redundancy and failure to explore existing codebase modules."
+    }
   },
   {
     "case_id": "case_04",
-    "title": "Sample Case 4",
-    "difficulty": "standard",
-    "input": "Task input for scenario 4",
-    "expected_output": "Expected target output for scenario 4"
+    "title": "Async Event Loop Blocking via Synchronous HTTP",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Calling requests.get inside async def endpoint freezes the asyncio single-threaded event loop.",
+    "expected_optimal_solution": "Use httpx.AsyncClient or aiohttp.",
+    "spec": {
+      "scenario_id": "case_04",
+      "title": "High-Throughput Webhook Forwarder",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Forward incoming payment webhooks to third-party providers with 1000 RPS concurrency.",
+      "requirements": {
+        "latency_p95_sla_ms": 80.0,
+        "concurrency_target_rps": 1000
+      },
+      "existing_codebase_map": {
+        "src/core/http_client.py": "Preconfigured asynchronous HTTP client pool with connection limits."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_04",
+      "scenario_id": "case_04",
+      "full_diff": "--- a/src/api/webhooks.py\n+++ b/src/api/webhooks.py\n@@ -8,3 +8,6 @@\n+import requests\n+async def handle_webhook(payload: dict):\n+    resp = requests.post('https://partner.com/hook', json=payload)",
+      "file_changes": [
+        {
+          "path": "src/api/webhooks.py",
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "diff_content": "+import requests\n+async def handle_webhook(payload: dict):\n+    resp = requests.post('https://partner.com/hook', json=payload)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 35.0,
+      "primary_flaw": "Synchronous I/O in async route causes catastrophic throughput degradation under concurrent load."
+    }
   },
   {
     "case_id": "case_05",
-    "title": "Sample Case 5",
-    "difficulty": "standard",
-    "input": "Task input for scenario 5",
-    "expected_output": "Expected target output for scenario 5"
+    "title": "Non-Idempotent Balance Mutation Race Condition",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Mutating account balance without SELECT FOR UPDATE or optimistic locking leads to double spending.",
+    "expected_optimal_solution": "Apply row-level lock or atomic database decrement.",
+    "spec": {
+      "scenario_id": "case_05",
+      "title": "Wallet Debit Endpoint",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Debit funds from user wallet with strict concurrency safety.",
+      "requirements": {
+        "latency_p95_sla_ms": 60.0
+      },
+      "existing_codebase_map": {
+        "src/db/models.py": "Account and transaction models."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_05",
+      "scenario_id": "case_05",
+      "full_diff": "--- a/src/services/wallet.py\n+++ b/src/services/wallet.py\n@@ -20,4 +20,6 @@\n+def debit_wallet(user_id: int, amount: float):\n+    acc = db.query(Account).filter_by(user_id=user_id).first()\n+    acc.balance -= amount\n+    db.commit()",
+      "file_changes": [
+        {
+          "path": "src/services/wallet.py",
+          "added_lines": 5,
+          "deleted_lines": 0,
+          "diff_content": "+def debit_wallet(user_id: int, amount: float):\n+    acc = db.query(Account).filter_by(user_id=user_id).first()\n+    acc.balance -= amount\n+    db.commit()"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 40.0,
+      "primary_flaw": "Concurrency race condition permitting double-spend under simultaneous requests."
+    }
   },
   {
     "case_id": "case_06",
-    "title": "Sample Case 6",
-    "difficulty": "standard",
-    "input": "Task input for scenario 6",
-    "expected_output": "Expected target output for scenario 6"
+    "title": "Thundering Herd Cache Invalidation Pattern",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Hard TTL expiration on hot keys causes instantaneous database stampede.",
+    "expected_optimal_solution": "Apply probabilistic early expiration (XFetch) or mutex lock on cache misses.",
+    "spec": {
+      "scenario_id": "case_06",
+      "title": "Trending Products Aggregator",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Serve trending products widget to 50k active concurrent visitors.",
+      "requirements": {
+        "latency_p95_sla_ms": 30.0
+      },
+      "existing_codebase_map": {
+        "src/core/redis_client.py": "Redis cache client."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_06",
+      "scenario_id": "case_06",
+      "full_diff": "--- a/src/services/trending.py\n+++ b/src/services/trending.py\n@@ -10,3 +10,5 @@\n+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)",
+      "file_changes": [
+        {
+          "path": "src/services/trending.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": true,
+      "ground_truth_score": 75.0,
+      "primary_flaw": "Acceptable for small loads, but minor debt due to lack of stampede protection."
+    }
   },
   {
     "case_id": "case_07",
-    "title": "Sample Case 7",
-    "difficulty": "standard",
-    "input": "Task input for scenario 7",
-    "expected_output": "Expected target output for scenario 7"
+    "title": "Clean Atomic Distributed Rate Limiter",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "None - Candidate implemented an optimal atomic token bucket in Redis with zero race conditions.",
+    "expected_optimal_solution": "Redis Lua script or atomic token bucket.",
+    "spec": {
+      "scenario_id": "case_07",
+      "title": "API Gateway Rate Limiting",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Implement global per-tenant rate limiter across all gateway nodes.",
+      "requirements": {
+        "latency_p95_sla_ms": 15.0,
+        "concurrency_target_rps": 5000
+      },
+      "existing_codebase_map": {
+        "src/core/redis_client.py": "Redis pool."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_07",
+      "scenario_id": "case_07",
+      "full_diff": "--- a/src/middleware/rate_limit.py\n+++ b/src/middleware/rate_limit.py\n@@ -1,5 +1,15 @@\n+async def check_rate_limit(tenant_id: str, limit: int, window: int) -> bool:\n+    key = f'rate:{tenant_id}'\n+    current = await redis.incr(key)\n+    if current == 1:\n+        await redis.expire(key, window)\n+    return current <= limit",
+      "file_changes": [
+        {
+          "path": "src/middleware/rate_limit.py",
+          "added_lines": 8,
+          "deleted_lines": 0,
+          "diff_content": "+async def check_rate_limit(tenant_id: str, limit: int, window: int) -> bool:\n+    key = f'rate:{tenant_id}'\n+    current = await redis.incr(key)\n+    if current == 1:\n+        await redis.expire(key, window)\n+    return current <= limit"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": true,
+      "ground_truth_score": 92.0,
+      "primary_flaw": "None. Clean, atomic, and respects existing Redis infrastructure."
+    }
   },
   {
     "case_id": "case_08",
-    "title": "Sample Case 8",
-    "difficulty": "standard",
-    "input": "Task input for scenario 8",
-    "expected_output": "Expected target output for scenario 8"
+    "title": "Raw SQL Concatenation (OWASP SQL Injection)",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Candidate introduced string formatted f-string in SQL query.",
+    "expected_optimal_solution": "Use parameterized queries or ORM expressions.",
+    "spec": {
+      "scenario_id": "case_08",
+      "title": "Search Query Optimization",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Optimize search query across customer metadata.",
+      "requirements": {
+        "latency_p95_sla_ms": 40.0
+      },
+      "existing_codebase_map": {
+        "src/db/session.py": "Database session."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_08",
+      "scenario_id": "case_08",
+      "full_diff": "--- a/src/services/search.py\n+++ b/src/services/search.py\n@@ -12,2 +12,4 @@\n+def search_customer(query: str):\n+    return db.execute(f\"SELECT * FROM customers WHERE name LIKE '%{query}%'\")",
+      "file_changes": [
+        {
+          "path": "src/services/search.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+def search_customer(query: str):\n+    return db.execute(f\"SELECT * FROM customers WHERE name LIKE '%{query}%'\")"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 20.0,
+      "primary_flaw": "Critical security flaw: SQL injection vulnerability introduced."
+    }
   },
   {
     "case_id": "case_09",
-    "title": "Sample Case 9",
-    "difficulty": "standard",
-    "input": "Task input for scenario 9",
-    "expected_output": "Expected target output for scenario 9"
+    "title": "Public API Contract Drift & Breaking Change",
+    "difficulty": "Senior",
+    "ground_truth_flaw": "Deleted response fields in public API, breaking mobile clients.",
+    "expected_optimal_solution": "Maintain backwards compatibility with deprecated field annotations.",
+    "spec": {
+      "scenario_id": "case_09",
+      "title": "Order Status Response Refactoring",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Clean up internal order status schema.",
+      "requirements": {
+        "latency_p95_sla_ms": 30.0
+      },
+      "existing_codebase_map": {
+        "src/schemas/orders.py": "Order response models."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_09",
+      "scenario_id": "case_09",
+      "full_diff": "--- a/src/api/orders.py\n+++ b/src/api/orders.py\n@@ -30,4 +30,5 @@\n+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response",
+      "file_changes": [
+        {
+          "path": "src/api/orders.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 55.0,
+      "primary_flaw": "Breaking change in public response schema without versioning."
+    }
   },
   {
     "case_id": "case_10",
-    "title": "Sample Case 10",
-    "difficulty": "challenging",
-    "input": "Task input for scenario 10",
-    "expected_output": "Expected target output for scenario 10"
+    "title": "The Elegant Distributed Deadlock (Challenging Case)",
+    "difficulty": "Challenging",
+    "ground_truth_flaw": "Two services acquire locks in reverse order (lock_a then lock_b vs lock_b then lock_a), causing catastrophic distributed deadlocks under concurrent traffic.",
+    "expected_optimal_solution": "Enforce global lock ordering hierarchy (e.g. always acquire lock_a before lock_b).",
+    "spec": {
+      "scenario_id": "case_10",
+      "title": "Multi-Account Fund Transfer Engine",
+      "architecture_type": "MICROSERVICES",
+      "description": "Handle bilateral currency transfers between accounts across distinct ledger shards.",
+      "requirements": {
+        "latency_p95_sla_ms": 60.0,
+        "concurrency_target_rps": 2000
+      },
+      "existing_codebase_map": {
+        "src/core/distributed_lock.py": "Redlock multi-node lock provider."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_10",
+      "scenario_id": "case_10",
+      "full_diff": "--- a/src/services/transfer.py\n+++ b/src/services/transfer.py\n@@ -10,12 +10,25 @@\n+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    # Acquire locks based on argument order\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)",
+      "file_changes": [
+        {
+          "path": "src/services/transfer.py",
+          "added_lines": 12,
+          "deleted_lines": 0,
+          "diff_content": "+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 30.0,
+      "primary_flaw": "Inverted lock acquisition order creates distributed deadlock under concurrent opposing transfers."
+    }
   }
 ]
