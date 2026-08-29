@@ -22,6 +22,10 @@ venv/
 htmlcov/
 *.log
 
+# Generated runtime traces
+traces/
+eval/benchmark_results.json
+
 # IDE settings
 .idea/
 .vscode/
