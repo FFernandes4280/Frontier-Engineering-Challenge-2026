@@ -26,14 +26,14 @@ def load_dataset(dataset_path: str = "eval/dataset/cases.json") -> List[Dict[str
         return json.load(f)
 
 
-async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> List[EvaluationResult]:
+async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]], verbose: bool = False, interactive: bool = False) -> List[EvaluationResult]:
     """Executes the benchmark for a specific runner across all test cases with progress feedback."""
     results: List[EvaluationResult] = []
 
     if runner_type == "baseline":
-        runner = BaselineVettingRunner()
+        runner = BaselineVettingRunner(verbose=verbose)
     else:
-        runner = HolisticVettingOrchestrator()
+        runner = HolisticVettingOrchestrator(verbose=verbose, interactive_human_gate=interactive)
 
     for idx, item in enumerate(cases):
         spec_dict = dict(item["spec"])
@@ -46,7 +46,8 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
         submission = CandidateSubmission.model_validate(item["submission"])
         ground_truth = item.get("human_senior_verdict", {})
 
-        console.print(f"  [dim][{idx+1:02d}/{len(cases):02d}][/dim] Evaluating [cyan]{item['title']}[/cyan] ({spec.github_repo})...")
+        if not verbose:
+            console.print(f"  [dim][{idx+1:02d}/{len(cases):02d}][/dim] Evaluating [cyan]{item['title']}[/cyan] ({spec.github_repo})...")
 
         # Run evaluation
         dossier, logger = await runner.evaluate_submission(submission, spec)
@@ -82,7 +83,7 @@ async def execute_benchmark(runner_type: str, cases: List[Dict[str, Any]]) -> Li
         )
         results.append(result)
         # Courteous delay between requests
-        await asyncio.sleep(1.2)
+        await asyncio.sleep(0.5)
 
     return results
 
@@ -92,11 +93,23 @@ def run(
     runner: str = typer.Option("both", "--runner", "-r", help="Runner: baseline, advanced, or both"),
     dataset: str = typer.Option("eval/dataset/cases.json", "--dataset", "-d", help="Dataset path"),
     output: str = typer.Option("eval/benchmark_results.json", "--output", "-o", help="Output JSON path"),
-    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of test cases to evaluate (e.g. 2)")
+    limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of test cases to evaluate (e.g. 2)"),
+    case: Optional[int] = typer.Option(None, "--case", "-c", help="Evaluate a specific test case by number (1 to 10)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Display full step-by-step trace of the execution"),
+    interactive: bool = typer.Option(False, "--interactive", "-i", help="Enable interactive Human-in-the-Loop decision gate")
 ):
     """Executes the benchmark and displays the official comparative table."""
     cases = load_dataset(dataset)
-    if limit and limit > 0:
+    
+    if case and 1 <= case <= len(cases):
+        cases = [cases[case - 1]]
+        console.print(f"[bold cyan]🎯 Selected Single Case #{case}: {cases[0]['title']} ({cases[0]['spec'].get('github_repo', 'N/A')})[/bold cyan]\n")
+        # Automatically turn on verbose for single case
+        verbose = True
+        # If single case run interactively, default interactive to True if not specified
+        if interactive is False and runner in ["advanced", "both"]:
+            interactive = True
+    elif limit and limit > 0:
         cases = cases[:limit]
         console.print(f"[yellow]⚠️ Limiting benchmark evaluation to the first {limit} test cases.[/yellow]")
 
@@ -106,8 +119,8 @@ def run(
     detailed_results = {}
 
     for r_type in runners_to_run:
-        console.print(f"\n[bold cyan]🚀 Running {r_type.upper()} on {len(cases)} cases...[/bold cyan]")
-        results = asyncio.run(execute_benchmark(r_type, cases))
+        console.print(f"\n[bold cyan]🚀 Running {r_type.upper()} on {len(cases)} case(s)...[/bold cyan]")
+        results = asyncio.run(execute_benchmark(r_type, cases, verbose=verbose, interactive=interactive))
         summary = compute_benchmark_summary(results)
         all_summaries[r_type] = summary
         detailed_results[r_type] = [r.model_dump() for r in results]
