@@ -1,0 +1,29 @@
+{
+  "run_id": "a2bc44e5",
+  "runner_type": "baseline",
+  "task_id": "case_10_cand_10",
+  "start_time": "2026-08-29T03:07:53.300330",
+  "end_time": "2026-08-29T03:07:53.330055",
+  "success": true,
+  "total_tokens": 0,
+  "total_cost_usd": 0.0,
+  "total_duration_ms": 0.0,
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-08-29T03:07:53.300348",
+      "event_type": "LLM_CALL",
+      "agent_name": "BaselineMonolithicReviewer",
+      "state": null,
+      "input_data": {
+        "prompt": "Problem: Multi-Shard Transfer Engine (Databases)\nDescription: Handle bilateral ledger transfers between shards under 2000 RPS concurrent load.\nCandidate Diff:\n--- a/databases/core.py\n+++ b/databases/core.py\n@@ -10,12 +10,25 @@\n+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    # Acquire locks based on argument order\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)\nUnit Tests: 10/10 Passed.",
+        "model": "gemini/gemini-1.5-pro"
+      },
+      "output_data": null,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "latency_ms": 0.0,
+      "metadata": {}
+    }
+  ]
+}

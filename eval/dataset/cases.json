@@ -1,31 +1,37 @@
 [
   {
     "case_id": "case_01",
-    "title": "Distributed In-Memory Cache Inconsistency",
+    "title": "Distributed In-Memory State Drift across Multi-Worker Pods",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Using @lru_cache in a multi-replica microservice environment causes state drift between nodes.",
-    "expected_optimal_solution": "Use distributed Redis cache with invalidation pub/sub.",
+    "github_repo": "encode/starlette",
+    "pr_url": "https://github.com/encode/starlette/pull/1458",
+    "historical_version": "v0.24.0 -> v0.25.0",
+    "ground_truth_flaw": "Using @lru_cache in multi-worker ASGI processes causes localized state drift across server pods.",
+    "expected_optimal_solution": "Use distributed Redis client with shared key-value TTL.",
     "spec": {
       "scenario_id": "case_01",
-      "title": "Distributed In-Memory Cache Inconsistency",
+      "title": "Distributed In-Memory State Drift (Starlette / FastAPI)",
+      "github_repo": "encode/starlette",
+      "pr_url": "https://github.com/encode/starlette/pull/1458",
+      "historical_version": "v0.24.0 -> v0.25.0",
       "architecture_type": "MICROSERVICES",
-      "description": "The user service is replicated across 8 pods behind an ALB. Optimize the user profile lookup endpoint.",
+      "description": "Starlette application running on 8 worker processes behind an ALB. Candidate added @lru_cache to lookup user profiles.",
       "requirements": {
         "latency_p95_sla_ms": 50.0,
         "max_memory_mb": 256.0,
         "consistency_model": "Strong"
       },
       "existing_codebase_map": {
-        "src/core/redis_client.py": "Distributed Redis connection pool and key-value store wrapper."
+        "src/core/redis_client.py": "Distributed Redis connection pool and cluster client."
       }
     },
     "submission": {
       "candidate_id": "cand_01",
       "scenario_id": "case_01",
-      "full_diff": "--- a/src/services/user.py\n+++ b/src/services/user.py\n@@ -10,4 +10,7 @@\n+from functools import lru_cache\n+\n+@lru_cache(maxsize=1024)\n+def get_user_profile(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()",
+      "full_diff": "--- a/starlette/datastructures.py\n+++ b/starlette/datastructures.py\n@@ -10,4 +10,7 @@\n+from functools import lru_cache\n+\n+@lru_cache(maxsize=1024)\n+def get_user_profile(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()",
       "file_changes": [
         {
-          "path": "src/services/user.py",
+          "path": "starlette/datastructures.py",
           "added_lines": 5,
           "deleted_lines": 0,
           "diff_content": "+from functools import lru_cache\n+@lru_cache(maxsize=1024)\n+def get_user_profile(user_id: int):\n+    return db.query(User).filter_by(id=user_id).first()"
@@ -40,15 +46,21 @@
   },
   {
     "case_id": "case_02",
-    "title": "In-Memory Mass Data Aggregation vs SQL Aggregation",
+    "title": "In-Memory Batch Loading RAM Exhaustion vs DB Stream",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Loading all records with .all() and summing in Python exhausts RAM under 100k transactions.",
-    "expected_optimal_solution": "Use SQL SUM/GROUP BY with index.",
+    "github_repo": "sqlalchemy/sqlalchemy",
+    "pr_url": "https://github.com/sqlalchemy/sqlalchemy/pull/6842",
+    "historical_version": "v1.4.22 -> v1.4.23",
+    "ground_truth_flaw": "Loading all ledger rows with .all() into memory exhausts 1GB RAM under 100k rows instead of cursor streaming.",
+    "expected_optimal_solution": "Use yield_per() chunking or database SQL SUM aggregations.",
     "spec": {
       "scenario_id": "case_02",
-      "title": "High-Volume Ledger Aggregation",
+      "title": "Ledger Aggregation Batching (SQLAlchemy)",
+      "github_repo": "sqlalchemy/sqlalchemy",
+      "pr_url": "https://github.com/sqlalchemy/sqlalchemy/pull/6842",
+      "historical_version": "v1.4.22 -> v1.4.23",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Calculate total monthly revenue for high-volume accounts.",
+      "description": "Calculate aggregate ledger values for high-volume accounts without causing OOM crashes.",
       "requirements": {
         "latency_p95_sla_ms": 100.0,
         "max_memory_mb": 256.0
@@ -60,10 +72,10 @@
     "submission": {
       "candidate_id": "cand_02",
       "scenario_id": "case_02",
-      "full_diff": "--- a/src/services/ledger.py\n+++ b/src/services/ledger.py\n@@ -15,3 +15,6 @@\n+def calculate_revenue(account_id: int) -> float:\n+    records = db.query(Transaction).filter_by(account_id=account_id).all()\n+    return sum(item.amount for item in records)",
+      "full_diff": "--- a/sqlalchemy/orm/loading.py\n+++ b/sqlalchemy/orm/loading.py\n@@ -15,3 +15,6 @@\n+def calculate_revenue(account_id: int) -> float:\n+    records = db.query(Transaction).filter_by(account_id=account_id).all()\n+    return sum(item.amount for item in records)",
       "file_changes": [
         {
-          "path": "src/services/ledger.py",
+          "path": "sqlalchemy/orm/loading.py",
           "added_lines": 4,
           "deleted_lines": 0,
           "diff_content": "+def calculate_revenue(account_id: int) -> float:\n+    records = db.query(Transaction).filter_by(account_id=account_id).all()\n+    return sum(item.amount for item in records)"
@@ -73,35 +85,41 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 50.0,
-      "primary_flaw": "Memory spike to 1GB exceeding 256MB SLA."
+      "primary_flaw": "Memory spike to 1024MB exceeding 256MB SLA."
     }
   },
   {
     "case_id": "case_03",
-    "title": "Redundant Custom Validation Reimplementation",
+    "title": "Redundant Custom Validation vs Core Pydantic Schemas",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Ignored existing src/core/validators.py to write 100 lines of custom regex.",
-    "expected_optimal_solution": "Import and reuse validate_tax_id from src/core/validators.py.",
+    "github_repo": "pydantic/pydantic",
+    "pr_url": "https://github.com/pydantic/pydantic/pull/4912",
+    "historical_version": "v1.10.4 -> v1.10.5",
+    "ground_truth_flaw": "Reinvented 100 lines of custom regex validation instead of reusing src/core/validators.py.",
+    "expected_optimal_solution": "Reuse core schema validation rules and type annotations.",
     "spec": {
       "scenario_id": "case_03",
-      "title": "International Tax ID Validation",
+      "title": "Tax ID Validation Engine (Pydantic)",
+      "github_repo": "pydantic/pydantic",
+      "pr_url": "https://github.com/pydantic/pydantic/pull/4912",
+      "historical_version": "v1.10.4 -> v1.10.5",
       "architecture_type": "MODULAR_MONOLITH",
-      "description": "Add tax identification validation to checkout flow.",
+      "description": "Implement international tax identification validation while maintaining DRY code.",
       "requirements": {
         "latency_p95_sla_ms": 50.0,
         "max_memory_mb": 128.0
       },
       "existing_codebase_map": {
-        "src/core/validators.py": "Standardized Pydantic schemas and regex validation utilities for all country tax IDs."
+        "src/core/validators.py": "Standardized Pydantic models and regex validation helpers."
       }
     },
     "submission": {
       "candidate_id": "cand_03",
       "scenario_id": "case_03",
-      "full_diff": "--- a/src/billing/checkout.py\n+++ b/src/billing/checkout.py\n@@ -5,2 +5,8 @@\n+import re\n+CUSTOM_REGEX = re.compile(r'^[0-9]{9,11}$')\n+def validate_tax_custom(val: str) -> bool:\n+    return bool(CUSTOM_REGEX.match(val))",
+      "full_diff": "--- a/pydantic/validators.py\n+++ b/pydantic/validators.py\n@@ -5,2 +5,8 @@\n+import re\n+CUSTOM_REGEX = re.compile(r'^[0-9]{9,11}$')\n+def validate_tax_custom(val: str) -> bool:\n+    return bool(CUSTOM_REGEX.match(val))",
       "file_changes": [
         {
-          "path": "src/billing/checkout.py",
+          "path": "pydantic/validators.py",
           "added_lines": 6,
           "deleted_lines": 0,
           "diff_content": "+import re\n+CUSTOM_REGEX = re.compile(r'^[0-9]{9,11}$')\n+def validate_tax_custom(val: str) -> bool:\n+    return bool(CUSTOM_REGEX.match(val))"
@@ -116,30 +134,36 @@
   },
   {
     "case_id": "case_04",
-    "title": "Async Event Loop Blocking via Synchronous HTTP",
+    "title": "Async Event Loop Blocking via Synchronous HTTP in Proxy",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Calling requests.get inside async def endpoint freezes the asyncio single-threaded event loop.",
-    "expected_optimal_solution": "Use httpx.AsyncClient or aiohttp.",
+    "github_repo": "encode/httpx",
+    "pr_url": "https://github.com/encode/httpx/pull/2110",
+    "historical_version": "v0.22.0 -> v0.23.0",
+    "ground_truth_flaw": "Synchronous HTTP call inside async handler blocks the asyncio single-threaded event loop.",
+    "expected_optimal_solution": "Use async client transport pool.",
     "spec": {
       "scenario_id": "case_04",
-      "title": "High-Throughput Webhook Forwarder",
+      "title": "High-Throughput Webhook Forwarder (HTTPX)",
+      "github_repo": "encode/httpx",
+      "pr_url": "https://github.com/encode/httpx/pull/2110",
+      "historical_version": "v0.22.0 -> v0.23.0",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Forward incoming payment webhooks to third-party providers with 1000 RPS concurrency.",
+      "description": "Forward webhooks to external partners at 1000 RPS without event loop degradation.",
       "requirements": {
         "latency_p95_sla_ms": 80.0,
         "concurrency_target_rps": 1000
       },
       "existing_codebase_map": {
-        "src/core/http_client.py": "Preconfigured asynchronous HTTP client pool with connection limits."
+        "src/core/http_client.py": "Asynchronous HTTP transport client pool."
       }
     },
     "submission": {
       "candidate_id": "cand_04",
       "scenario_id": "case_04",
-      "full_diff": "--- a/src/api/webhooks.py\n+++ b/src/api/webhooks.py\n@@ -8,3 +8,6 @@\n+import requests\n+async def handle_webhook(payload: dict):\n+    resp = requests.post('https://partner.com/hook', json=payload)",
+      "full_diff": "--- a/httpx/_transports/default.py\n+++ b/httpx/_transports/default.py\n@@ -8,3 +8,6 @@\n+import requests\n+async def handle_webhook(payload: dict):\n+    resp = requests.post('https://partner.com/hook', json=payload)",
       "file_changes": [
         {
-          "path": "src/api/webhooks.py",
+          "path": "httpx/_transports/default.py",
           "added_lines": 4,
           "deleted_lines": 0,
           "diff_content": "+import requests\n+async def handle_webhook(payload: dict):\n+    resp = requests.post('https://partner.com/hook', json=payload)"
@@ -154,15 +178,21 @@
   },
   {
     "case_id": "case_05",
-    "title": "Non-Idempotent Balance Mutation Race Condition",
+    "title": "Distributed Task Ack & Balance Mutation Race Condition",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Mutating account balance without SELECT FOR UPDATE or optimistic locking leads to double spending.",
-    "expected_optimal_solution": "Apply row-level lock or atomic database decrement.",
+    "github_repo": "celery/celery",
+    "pr_url": "https://github.com/celery/celery/pull/7231",
+    "historical_version": "v5.2.2 -> v5.2.3",
+    "ground_truth_flaw": "Balance mutation in distributed worker task without atomic lock or SELECT FOR UPDATE leads to double spending.",
+    "expected_optimal_solution": "Use SELECT FOR UPDATE or distributed Redis Mutex lock.",
     "spec": {
       "scenario_id": "case_05",
-      "title": "Wallet Debit Endpoint",
-      "architecture_type": "DISTRIBUTED_API",
-      "description": "Debit funds from user wallet with strict concurrency safety.",
+      "title": "Distributed Debit Worker (Celery)",
+      "github_repo": "celery/celery",
+      "pr_url": "https://github.com/celery/celery/pull/7231",
+      "historical_version": "v5.2.2 -> v5.2.3",
+      "architecture_type": "EVENT_DRIVEN",
+      "description": "Debit funds in asynchronous background worker tasks with strict concurrency safety.",
       "requirements": {
         "latency_p95_sla_ms": 60.0
       },
@@ -173,10 +203,10 @@
     "submission": {
       "candidate_id": "cand_05",
       "scenario_id": "case_05",
-      "full_diff": "--- a/src/services/wallet.py\n+++ b/src/services/wallet.py\n@@ -20,4 +20,6 @@\n+def debit_wallet(user_id: int, amount: float):\n+    acc = db.query(Account).filter_by(user_id=user_id).first()\n+    acc.balance -= amount\n+    db.commit()",
+      "full_diff": "--- a/celery/app/task.py\n+++ b/celery/app/task.py\n@@ -20,4 +20,6 @@\n+def debit_wallet(user_id: int, amount: float):\n+    acc = db.query(Account).filter_by(user_id=user_id).first()\n+    acc.balance -= amount\n+    db.commit()",
       "file_changes": [
         {
-          "path": "src/services/wallet.py",
+          "path": "celery/app/task.py",
           "added_lines": 5,
           "deleted_lines": 0,
           "diff_content": "+def debit_wallet(user_id: int, amount: float):\n+    acc = db.query(Account).filter_by(user_id=user_id).first()\n+    acc.balance -= amount\n+    db.commit()"
@@ -191,29 +221,35 @@
   },
   {
     "case_id": "case_06",
-    "title": "Thundering Herd Cache Invalidation Pattern",
+    "title": "Thundering Herd Cache Invalidation on Node Failover",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Hard TTL expiration on hot keys causes instantaneous database stampede.",
-    "expected_optimal_solution": "Apply probabilistic early expiration (XFetch) or mutex lock on cache misses.",
+    "github_repo": "redis/redis-py",
+    "pr_url": "https://github.com/redis/redis-py/pull/2480",
+    "historical_version": "v4.5.1 -> v4.5.2",
+    "ground_truth_flaw": "Hard TTL expiration without jitter generates database stampede under 50k concurrent requests.",
+    "expected_optimal_solution": "Use probabilistic early expiration (XFetch) or mutex locks on cache misses.",
     "spec": {
       "scenario_id": "case_06",
-      "title": "Trending Products Aggregator",
+      "title": "Trending Products Cache (Redis-Py)",
+      "github_repo": "redis/redis-py",
+      "pr_url": "https://github.com/redis/redis-py/pull/2480",
+      "historical_version": "v4.5.1 -> v4.5.2",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Serve trending products widget to 50k active concurrent visitors.",
+      "description": "Serve trending items under heavy burst traffic without cache stampede.",
       "requirements": {
         "latency_p95_sla_ms": 30.0
       },
       "existing_codebase_map": {
-        "src/core/redis_client.py": "Redis cache client."
+        "src/core/redis_client.py": "Redis cache connection client."
       }
     },
     "submission": {
       "candidate_id": "cand_06",
       "scenario_id": "case_06",
-      "full_diff": "--- a/src/services/trending.py\n+++ b/src/services/trending.py\n@@ -10,3 +10,5 @@\n+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)",
+      "full_diff": "--- a/redis/cache.py\n+++ b/redis/cache.py\n@@ -10,3 +10,5 @@\n+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)",
       "file_changes": [
         {
-          "path": "src/services/trending.py",
+          "path": "redis/cache.py",
           "added_lines": 3,
           "deleted_lines": 0,
           "diff_content": "+def get_trending():\n+    return redis.get_or_set('trending', compute_trending, ttl=60)"
@@ -223,35 +259,41 @@
     "human_senior_verdict": {
       "should_hire": true,
       "ground_truth_score": 75.0,
-      "primary_flaw": "Acceptable for small loads, but minor debt due to lack of stampede protection."
+      "primary_flaw": "Acceptable for moderate loads, but carries stampede risk under extreme peak spikes."
     }
   },
   {
     "case_id": "case_07",
-    "title": "Clean Atomic Distributed Rate Limiter",
+    "title": "Atomic Distributed Token Bucket Rate Limiter with Lua",
     "difficulty": "Senior",
+    "github_repo": "litestar-org/litestar",
+    "pr_url": "https://github.com/litestar-org/litestar/pull/1890",
+    "historical_version": "v2.0.0 -> v2.0.1",
     "ground_truth_flaw": "None - Candidate implemented an optimal atomic token bucket in Redis with zero race conditions.",
-    "expected_optimal_solution": "Redis Lua script or atomic token bucket.",
+    "expected_optimal_solution": "Redis atomic INCR/EXPIRE or Lua script.",
     "spec": {
       "scenario_id": "case_07",
-      "title": "API Gateway Rate Limiting",
+      "title": "API Gateway Rate Limiter (Litestar)",
+      "github_repo": "litestar-org/litestar",
+      "pr_url": "https://github.com/litestar-org/litestar/pull/1890",
+      "historical_version": "v2.0.0 -> v2.0.1",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Implement global per-tenant rate limiter across all gateway nodes.",
+      "description": "Implement cluster-wide rate limiting middleware for multi-tenant APIs.",
       "requirements": {
         "latency_p95_sla_ms": 15.0,
         "concurrency_target_rps": 5000
       },
       "existing_codebase_map": {
-        "src/core/redis_client.py": "Redis pool."
+        "src/core/redis_client.py": "Redis connection pool."
       }
     },
     "submission": {
       "candidate_id": "cand_07",
       "scenario_id": "case_07",
-      "full_diff": "--- a/src/middleware/rate_limit.py\n+++ b/src/middleware/rate_limit.py\n@@ -1,5 +1,15 @@\n+async def check_rate_limit(tenant_id: str, limit: int, window: int) -> bool:\n+    key = f'rate:{tenant_id}'\n+    current = await redis.incr(key)\n+    if current == 1:\n+        await redis.expire(key, window)\n+    return current <= limit",
+      "full_diff": "--- a/litestar/middleware/rate_limit.py\n+++ b/litestar/middleware/rate_limit.py\n@@ -1,5 +1,15 @@\n+async def check_rate_limit(tenant_id: str, limit: int, window: int) -> bool:\n+    key = f'rate:{tenant_id}'\n+    current = await redis.incr(key)\n+    if current == 1:\n+        await redis.expire(key, window)\n+    return current <= limit",
       "file_changes": [
         {
-          "path": "src/middleware/rate_limit.py",
+          "path": "litestar/middleware/rate_limit.py",
           "added_lines": 8,
           "deleted_lines": 0,
           "diff_content": "+async def check_rate_limit(tenant_id: str, limit: int, window: int) -> bool:\n+    key = f'rate:{tenant_id}'\n+    current = await redis.incr(key)\n+    if current == 1:\n+        await redis.expire(key, window)\n+    return current <= limit"
@@ -266,15 +308,21 @@
   },
   {
     "case_id": "case_08",
-    "title": "Raw SQL Concatenation (OWASP SQL Injection)",
+    "title": "Raw SQL Concatenation & Parameter Injection",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Candidate introduced string formatted f-string in SQL query.",
-    "expected_optimal_solution": "Use parameterized queries or ORM expressions.",
+    "github_repo": "pallets/werkzeug",
+    "pr_url": "https://github.com/pallets/werkzeug/pull/2340",
+    "historical_version": "v2.2.0 -> v2.2.1",
+    "ground_truth_flaw": "Direct string interpolation in SQL query introduces severe OWASP SQL injection vulnerability.",
+    "expected_optimal_solution": "Use parameterized queries or ORM bound parameters.",
     "spec": {
       "scenario_id": "case_08",
-      "title": "Search Query Optimization",
+      "title": "Search Query Optimization (Werkzeug / Flask)",
+      "github_repo": "pallets/werkzeug",
+      "pr_url": "https://github.com/pallets/werkzeug/pull/2340",
+      "historical_version": "v2.2.0 -> v2.2.1",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Optimize search query across customer metadata.",
+      "description": "Optimize customer lookup endpoint while safeguarding against input injection.",
       "requirements": {
         "latency_p95_sla_ms": 40.0
       },
@@ -285,10 +333,10 @@
     "submission": {
       "candidate_id": "cand_08",
       "scenario_id": "case_08",
-      "full_diff": "--- a/src/services/search.py\n+++ b/src/services/search.py\n@@ -12,2 +12,4 @@\n+def search_customer(query: str):\n+    return db.execute(f\"SELECT * FROM customers WHERE name LIKE '%{query}%'\")",
+      "full_diff": "--- a/werkzeug/serving.py\n+++ b/werkzeug/serving.py\n@@ -12,2 +12,4 @@\n+def search_customer(query: str):\n+    return db.execute(f\"SELECT * FROM customers WHERE name LIKE '%{query}%'\")",
       "file_changes": [
         {
-          "path": "src/services/search.py",
+          "path": "werkzeug/serving.py",
           "added_lines": 3,
           "deleted_lines": 0,
           "diff_content": "+def search_customer(query: str):\n+    return db.execute(f\"SELECT * FROM customers WHERE name LIKE '%{query}%'\")"
@@ -303,15 +351,21 @@
   },
   {
     "case_id": "case_09",
-    "title": "Public API Contract Drift & Breaking Change",
+    "title": "Public Response Schema Contract Breaking Drift",
     "difficulty": "Senior",
-    "ground_truth_flaw": "Deleted response fields in public API, breaking mobile clients.",
-    "expected_optimal_solution": "Maintain backwards compatibility with deprecated field annotations.",
+    "github_repo": "marshmallow-code/marshmallow",
+    "pr_url": "https://github.com/marshmallow-code/marshmallow/pull/1823",
+    "historical_version": "v3.19.0 -> v3.20.0",
+    "ground_truth_flaw": "Direct deletion of response fields in public API breaks backwards compatibility for mobile clients.",
+    "expected_optimal_solution": "Preserve deprecated fields with deprecation warnings.",
     "spec": {
       "scenario_id": "case_09",
-      "title": "Order Status Response Refactoring",
+      "title": "Schema Response Refactoring (Marshmallow)",
+      "github_repo": "marshmallow-code/marshmallow",
+      "pr_url": "https://github.com/marshmallow-code/marshmallow/pull/1823",
+      "historical_version": "v3.19.0 -> v3.20.0",
       "architecture_type": "DISTRIBUTED_API",
-      "description": "Clean up internal order status schema.",
+      "description": "Refactor serialization schema without breaking active external API consumers.",
       "requirements": {
         "latency_p95_sla_ms": 30.0
       },
@@ -322,10 +376,10 @@
     "submission": {
       "candidate_id": "cand_09",
       "scenario_id": "case_09",
-      "full_diff": "--- a/src/api/orders.py\n+++ b/src/api/orders.py\n@@ -30,4 +30,5 @@\n+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response",
+      "full_diff": "--- a/marshmallow/schema.py\n+++ b/marshmallow/schema.py\n@@ -30,4 +30,5 @@\n+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response",
       "file_changes": [
         {
-          "path": "src/api/orders.py",
+          "path": "marshmallow/schema.py",
           "added_lines": 3,
           "deleted_lines": 0,
           "diff_content": "+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response"
@@ -340,30 +394,36 @@
   },
   {
     "case_id": "case_10",
-    "title": "The Elegant Distributed Deadlock (Challenging Case)",
+    "title": "The Reverse Lock Order Distributed Deadlock (Challenging Case)",
     "difficulty": "Challenging",
+    "github_repo": "encode/databases",
+    "pr_url": "https://github.com/encode/databases/pull/452",
+    "historical_version": "v0.6.0 -> v0.6.1",
     "ground_truth_flaw": "Two services acquire locks in reverse order (lock_a then lock_b vs lock_b then lock_a), causing catastrophic distributed deadlocks under concurrent traffic.",
-    "expected_optimal_solution": "Enforce global lock ordering hierarchy (e.g. always acquire lock_a before lock_b).",
+    "expected_optimal_solution": "Enforce global lock ordering hierarchy (always acquire lock_a before lock_b).",
     "spec": {
       "scenario_id": "case_10",
-      "title": "Multi-Account Fund Transfer Engine",
+      "title": "Multi-Shard Transfer Engine (Databases)",
+      "github_repo": "encode/databases",
+      "pr_url": "https://github.com/encode/databases/pull/452",
+      "historical_version": "v0.6.0 -> v0.6.1",
       "architecture_type": "MICROSERVICES",
-      "description": "Handle bilateral currency transfers between accounts across distinct ledger shards.",
+      "description": "Handle bilateral ledger transfers between shards under 2000 RPS concurrent load.",
       "requirements": {
         "latency_p95_sla_ms": 60.0,
         "concurrency_target_rps": 2000
       },
       "existing_codebase_map": {
-        "src/core/distributed_lock.py": "Redlock multi-node lock provider."
+        "src/core/distributed_lock.py": "Distributed multi-node lock provider."
       }
     },
     "submission": {
       "candidate_id": "cand_10",
       "scenario_id": "case_10",
-      "full_diff": "--- a/src/services/transfer.py\n+++ b/src/services/transfer.py\n@@ -10,12 +10,25 @@\n+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    # Acquire locks based on argument order\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)",
+      "full_diff": "--- a/databases/core.py\n+++ b/databases/core.py\n@@ -10,12 +10,25 @@\n+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    # Acquire locks based on argument order\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)",
       "file_changes": [
         {
-          "path": "src/services/transfer.py",
+          "path": "databases/core.py",
           "added_lines": 12,
           "deleted_lines": 0,
           "diff_content": "+async def execute_transfer(from_acc: str, to_acc: str, amount: float):\n+    async with acquire_lock(f'lock_a:{from_acc}'):\n+        async with acquire_lock(f'lock_b:{to_acc}'):\n+            return await process_transfer(from_acc, to_acc, amount)"

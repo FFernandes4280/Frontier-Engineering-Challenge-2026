@@ -1,0 +1,29 @@
+{
+  "run_id": "2a9a379f",
+  "runner_type": "baseline",
+  "task_id": "case_09_cand_09",
+  "start_time": "2026-08-29T03:07:53.273117",
+  "end_time": "2026-08-29T03:07:53.299463",
+  "success": true,
+  "total_tokens": 0,
+  "total_cost_usd": 0.0,
+  "total_duration_ms": 0.0,
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-08-29T03:07:53.273133",
+      "event_type": "LLM_CALL",
+      "agent_name": "BaselineMonolithicReviewer",
+      "state": null,
+      "input_data": {
+        "prompt": "Problem: Schema Response Refactoring (Marshmallow)\nDescription: Refactor serialization schema without breaking active external API consumers.\nCandidate Diff:\n--- a/marshmallow/schema.py\n+++ b/marshmallow/schema.py\n@@ -30,4 +30,5 @@\n+    # Cleaned legacy status\n+    del response['legacy_status']\n+    return response\nUnit Tests: 10/10 Passed.",
+        "model": "gemini/gemini-1.5-pro"
+      },
+      "output_data": null,
+      "tokens": 0,
+      "cost_usd": 0.0,
+      "latency_ms": 0.0,
+      "metadata": {}
+    }
+  ]
+}

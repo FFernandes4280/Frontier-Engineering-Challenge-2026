@@ -32,13 +32,16 @@ class NonFunctionalRequirements(BaseModel):
     max_memory_mb: float = 256.0
     zero_downtime_required: bool = True
     concurrency_target_rps: int = 1000
-    consistency_model: str = "Strong"  # Strong, Eventual, Read-After-Write
+    consistency_model: str = "Strong"
 
 
 class ScenarioSpec(BaseModel):
-    """Specification of the distributed engineering problem and codebase."""
+    """Specification of the distributed engineering problem grounded in real open-source codebases."""
     scenario_id: str
     title: str
+    github_repo: Optional[str] = None
+    pr_url: Optional[str] = None
+    historical_version: Optional[str] = None
     difficulty: str = "Senior"
     architecture_type: ArchitectureType = ArchitectureType.DISTRIBUTED_API
     description: str
@@ -48,10 +51,10 @@ class ScenarioSpec(BaseModel):
         description="File path to file summary/purpose in the existing repo"
     )
     ground_truth_flaw: str = Field(
-        description="The real underlying issue (e.g., N+1 query, distributed lock order)"
+        description="The real underlying issue from the open-source repository"
     )
     expected_optimal_solution: str = Field(
-        description="The architectural solution an elite senior is expected to apply"
+        description="The canonical architectural solution merged by maintainers"
     )
 
 
@@ -80,7 +83,7 @@ class BlastRadiusMetrics(BaseModel):
     total_lines_changed: int = 0
     unnecessary_files_modified: List[str] = Field(default_factory=list)
     cyclomatic_complexity_delta: int = 0
-    blast_radius_score: float = 1.0  # 1.0 = highly focused, <0.6 = noisy/unfocused
+    blast_radius_score: float = 1.0
 
 
 class ContextAlignmentMetrics(BaseModel):
@@ -89,7 +92,7 @@ class ContextAlignmentMetrics(BaseModel):
     ignored_existing_modules: List[str] = Field(default_factory=list)
     duplicated_logic_detected: bool = False
     api_contract_preserved: bool = True
-    alignment_score: float = 1.0  # 0.0 to 1.0
+    alignment_score: float = 1.0
 
 
 class LoadSimulationResult(BaseModel):
@@ -130,7 +133,7 @@ class SeniorVettingDossier(BaseModel):
     """The final holistic evaluation report signed by the agent squad."""
     candidate_id: str
     scenario_id: str
-    overall_vetting_score: float = Field(ge=0.0, le=100.0)  # 0 to 100
+    overall_vetting_score: float = Field(ge=0.0, le=100.0)
     recommendation: RecommendationType
     architecture_score: float = Field(ge=0.0, le=100.0)
     concurrency_scalability_score: float = Field(ge=0.0, le=100.0)
