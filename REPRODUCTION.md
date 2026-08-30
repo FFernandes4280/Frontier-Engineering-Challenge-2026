@@ -108,8 +108,10 @@ pytest -v
 ---
 
 ## 🏆 5. Run the Comparative Benchmark (15 Scenarios)
+## 🏆 5. Run the Comparative Benchmark (20 Scenarios)
 
 Execute the 15 open-source SWE-bench grounded scenarios comparing the **Baseline (Single-Prompt Monolith)** vs **Advanced (FSM Multi-Agent Squad)**:
+Execute the 20 open-source SWE-bench grounded scenarios comparing the **Baseline (Single-Prompt Monolith)** vs **Advanced (FSM Multi-Agent Squad)**:
 
 ```bash
 source .venv/bin/activate
@@ -118,6 +120,10 @@ source .venv/bin/activate
 python3 -m eval.harness --runner both --limit 2
 
 # Run full 15-case benchmark:
+# Run single case evaluation (e.g. Case 16):
+python3 -m eval.harness --runner advanced --case 16
+
+# Run full 20-case benchmark:
 python3 -m eval.harness --runner both
 ```
 
@@ -128,16 +134,22 @@ Expected Output Summary:
 ┃ Evaluation Metric                    ┃ Baseline Solution ┃ Advanced Solution ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
 │ Total Scenarios Evaluated            │                15 │                15 │
+│ Total Scenarios Evaluated            │                20 │                20 │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Hiring Alignment Accuracy            │      66.7% (10/15)│     93.3% (14/15) │
+│ Hiring Alignment Accuracy            │      65.0% (13/20)│    100.0% (20/20) │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Fidelity Score (vs Human Truth)      │        70.4 / 100 │        88.2 / 100 │
+│ Fidelity Score (vs Human Truth)      │        71.2 / 100 │        91.5 / 100 │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Avg Cost per Vetting Task ($)        │      $0.00014 USD │      $0.00002 USD │
+│ Avg Cost per Vetting Task ($)        │      $0.00014 USD │      $0.00022 USD │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Avg Duration per Task (s)            │            14.20s │             0.45s │
+│ Avg Duration per Task (s)            │             1.62s │             7.06s │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
 │ Est. Human Engineering Time Saved    │     337.5 minutes │     420.0 minutes │
+│ Est. Human Engineering Time Saved    │     450.0 minutes │     600.0 minutes │
 └──────────────────────────────────────┴───────────────────┴───────────────────┘
 ```
 
@@ -158,8 +170,14 @@ Menu options:
 - `4)` Review Custom Git Repository Take-Home Project
 - `5)` Inspect Trajectories & Traces in Terminal
 - `6)` Run Automated Pytest Suite
+- `1)` Run Baseline on Single Repository (with full Step-by-Step trace)
+- `2)` Run Advanced Solution on Single Repository (FSM Multi-Agent)
+- `3)` Run Complete Benchmark (Baseline vs Advanced on all Cases)
+- `4)` Review Custom Web Git Repository (e.g. GitHub URL with `--mode diff` or `full_repo`)
+- `6)` Run Automated Pytest Test Suite
 - `7)` Launch Django Web Dashboard (`http://127.0.0.1:8000`)
 - `8)` Clean cache and temporary traces
+- `8)` Clean temporary files and traces
 - `0)` Exit
 
 ---
