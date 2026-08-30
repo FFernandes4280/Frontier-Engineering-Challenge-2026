@@ -43,7 +43,7 @@ show_menu() {
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Web Git Repository (e.g. GitHub URL)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Traces (Rich Terminal Viewer)"
     echo -e "  ${GREEN}6)${NC} 🧪 Run Pytest Test Suite"
-    echo -e "  ${GREEN}7)${NC} 🌐 Launch Interactive Web Dashboard (http://127.0.0.1:8000)"
+    echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (http://127.0.0.1:8000)"
     echo -e "  ${GREEN}8)${NC} 🧹 Clean temporary files and traces"
     echo -e "  ${RED}0)${NC} 🚪 Exit"
     echo ""
@@ -123,9 +123,9 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         7)
-            echo -e "${CYAN}🚀 Starting Interactive Web Dashboard on http://127.0.0.1:8000...${NC}"
-            echo -e "${YELLOW}Serving docs/ (GitHub Pages App). Press [Ctrl+C] to stop when done.${NC}\n"
-            python3 -m http.server 8000 --directory docs/
+            echo -e "${CYAN}🚀 Starting Django Web Dashboard on http://127.0.0.1:8000...${NC}"
+            echo -e "${YELLOW}Press [Ctrl+C] to stop the web server when done.${NC}\n"
+            python3 manage.py runserver 127.0.0.1:8000
             ;;
         8)
             echo -e "${YELLOW}Cleaning cache files and temporary traces...${NC}"

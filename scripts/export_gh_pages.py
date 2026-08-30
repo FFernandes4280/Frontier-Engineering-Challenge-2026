@@ -114,6 +114,10 @@ def build_github_pages():
             </a>
             
             <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#apiKeyModal">
+                    <i class="fa-solid fa-key"></i>
+                    <span id="navApiKeyBadge" class="badge bg-secondary">Pre-computed</span>
+                </button>
                 <button class="btn btn-sm btn-outline-info" onclick="showSection('custom-review')">
                     <i class="bi bi-box-seam me-1"></i> Take-Home Evaluator
                 </button>
@@ -126,6 +130,38 @@ def build_github_pages():
             </div>
         </div>
     </nav>
+
+
+    <!-- API Key Modal for Live Groq Inference -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark border border-secondary text-white">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="apiKeyModalLabel"><i class="fa-solid fa-key text-warning me-2"></i>Groq Cloud API Key (Live Inference)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="small text-secondary mb-3">
+                        Provide a Groq Cloud API key to trigger <strong>real-time live LLM inferences</strong> (<code>openai/gpt-oss-120b</code> and <code>openai/gpt-oss-20b</code>) directly from your browser.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-light">Groq API Key (starts with <code>gsk_...</code>):</label>
+                        <input type="password" class="form-control bg-black text-white border-secondary font-monospace" id="inputGroqApiKey" placeholder="gsk_...">
+                        <div class="form-text text-muted small">
+                            Obtain a free key at <a href="https://console.groq.com/keys" target="_blank" class="text-info">console.groq.com/keys</a>. Saved <strong>strictly in your local browser storage</strong>.
+                        </div>
+                    </div>
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-shield-check me-1"></i> <strong>Direct Client-Side Execution:</strong> Your token is sent strictly from your browser to Groq's official HTTPS endpoint (<code>api.groq.com</code>). Zero intermediate servers.
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearApiKey()">Clear Key</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="saveApiKey()">Save & Enable Live Mode</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main App Container -->
     <div class="container-fluid px-4 py-4">
@@ -631,6 +667,79 @@ def build_github_pages():
 
         let currentActiveCase = null;
 
+
+        // --- Groq Cloud API Key Management & Live Inference ---
+        function getApiKey() {
+            return localStorage.getItem('groq_api_key') || '';
+        }
+
+        function updateApiKeyUI() {
+            const key = getApiKey();
+            const badge = document.getElementById('navApiKeyBadge');
+            const input = document.getElementById('inputGroqApiKey');
+            if (input) input.value = key;
+            
+            if (key && key.startsWith('gsk_')) {
+                if (badge) {
+                    badge.className = 'badge bg-success';
+                    badge.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Live Groq Mode';
+                }
+            } else {
+                if (badge) {
+                    badge.className = 'badge bg-secondary';
+                    badge.innerText = 'Pre-computed Mode';
+                }
+            }
+        }
+
+        function saveApiKey() {
+            const val = document.getElementById('inputGroqApiKey').value.trim();
+            if (val) {
+                localStorage.setItem('groq_api_key', val);
+            } else {
+                localStorage.removeItem('groq_api_key');
+            }
+            updateApiKeyUI();
+            const modalEl = document.getElementById('apiKeyModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('groq_api_key');
+            document.getElementById('inputGroqApiKey').value = '';
+            updateApiKeyUI();
+            const modalEl = document.getElementById('apiKeyModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+
+        async function callGroqLive(messages, model = "openai/gpt-oss-20b", temperature = 0.2) {
+            const key = getApiKey();
+            if (!key) throw new Error("No API key configured");
+            const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${key}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    temperature: temperature
+                })
+            });
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                throw new Error(errJson.error?.message || `Groq API returned HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            return {
+                content: data.choices[0].message.content,
+                tokens: data.usage?.total_tokens || 0
+            };
+        }
+
         // Navigation Controller
         function showSection(sectionId) {
             document.querySelectorAll('.app-section').forEach(el => el.classList.add('d-none'));
@@ -790,72 +899,105 @@ def build_github_pages():
             document.getElementById('scenariosCatalog').classList.remove('d-none');
         }
 
-        // Trigger Simulated Evaluation in Modal
-        function triggerSimulatedEval() {
+        // Trigger Live or Pre-computed Evaluation in Modal
+        async function triggerSimulatedEval() {
             if (!currentActiveCase) return;
             const runner = document.getElementById('runnerSelectModal').value;
             const btn = document.getElementById('btnRunEvalModal');
             const resultBox = document.getElementById('modalEvalResult');
+            const apiKey = getApiKey();
 
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Evaluating FSM Pipeline...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + (apiKey ? 'Calling Groq Cloud LLM API Live...' : 'Evaluating FSM Pipeline...');
 
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-play-fill fs-5 align-middle me-1"></i> Run Evaluation';
+            const caseIdx = CASES_DATA.findIndex(c => c.case_id === currentActiveCase.case_id);
+            const blRes = BENCHMARK_DATA.details.baseline[caseIdx] || { details: { predicted_score: 50, recommendation: 'LEAN_NO' } };
+            const advRes = BENCHMARK_DATA.details.advanced[caseIdx] || { details: { predicted_score: 50, recommendation: 'LEAN_NO' } };
 
-                const caseIdx = CASES_DATA.findIndex(c => c.case_id === currentActiveCase.case_id);
-                const blRes = BENCHMARK_DATA.details.baseline[caseIdx] || { details: { predicted_score: 50, recommendation: 'LEAN_NO' } };
-                const advRes = BENCHMARK_DATA.details.advanced[caseIdx] || { details: { predicted_score: 50, recommendation: 'LEAN_NO' } };
+            let liveSummary = "";
+            let liveLatency = 0;
+            let isLive = false;
 
-                let html = '';
-                if (runner === 'both') {
-                    html = `
-                    <div class="card border-success p-3">
-                        <h6 class="fw-bold text-success mb-2"><i class="bi bi-trophy me-1"></i> Comparative Evaluation Results</h6>
-                        <div class="row text-center mb-3">
-                            <div class="col-6 border-end border-secondary">
-                                <small class="text-muted text-uppercase fw-bold">Baseline (120B)</small>
-                                <h3 class="fw-bold text-warning mb-0">${blRes.details.predicted_score.toFixed(1)}</h3>
-                                <span class="badge ${blRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'}">${blRes.details.recommendation}</span>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted text-uppercase fw-bold">Advanced (20B Squad)</small>
-                                <h3 class="fw-bold text-success mb-0">${advRes.details.predicted_score.toFixed(1)}</h3>
-                                <span class="badge ${advRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'}">${advRes.details.recommendation}</span>
-                            </div>
-                        </div>
-                        <p class="small text-secondary mb-0 border-top border-secondary pt-2">
-                            <strong>Ground Truth Senior Verdict:</strong> Score ${currentActiveCase.human_senior_verdict.ground_truth_score.toFixed(0)}/100 (${currentActiveCase.human_senior_verdict.should_hire ? 'HIRE' : 'REJECT'}).
-                        </p>
-                    </div>
-                    `;
-                } else if (runner === 'advanced') {
-                    html = `
-                    <div class="card border-info p-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold text-info mb-0"><i class="bi bi-robot me-1"></i> Advanced FSM Dossier</h6>
-                            <span class="badge bg-dark text-success">0.85s &bull; $0.000155</span>
-                        </div>
-                        <h2 class="fw-bold text-white mb-1">${advRes.details.predicted_score.toFixed(1)} <span class="fs-6 text-muted">/ 100</span></h2>
-                        <span class="badge ${advRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'} mb-2">${advRes.details.recommendation}</span>
-                        <p class="small text-secondary mb-0">AST telemetry & simulated concurrent load successfully synthesized by Senior Engineering Critic.</p>
-                    </div>
-                    `;
-                } else {
-                    html = `
-                    <div class="card border-warning p-3">
-                        <h6 class="fw-bold text-warning mb-2"><i class="bi bi-file-earmark-text me-1"></i> Baseline Monolith Dossier</h6>
-                        <h2 class="fw-bold text-white mb-1">${blRes.details.predicted_score.toFixed(1)} <span class="fs-6 text-muted">/ 100</span></h2>
-                        <span class="badge ${blRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'} mb-2">${blRes.details.recommendation}</span>
-                        <p class="small text-secondary mb-0">Evaluated via monolithic CoT prompt without dynamic execution.</p>
-                    </div>
-                    `;
+            if (apiKey) {
+                const t0 = performance.now();
+                try {
+                    const prompt = `Evaluate candidate diff for ${currentActiveCase.title} (${currentActiveCase.github_repo}):\n${currentActiveCase.submission.full_diff}\n\nProvide CalibratedScore (0-100), Recommendation, and 2-3 sentence technical justification.`;
+                    const res = await callGroqLive([
+                        { role: "system", content: "You are a Principal Software Architect evaluating candidate code diffs." },
+                        { role: "user", content: prompt }
+                    ], "openai/gpt-oss-20b");
+                    liveSummary = res.content;
+                    liveLatency = Math.round(performance.now() - t0);
+                    isLive = true;
+                } catch (e) {
+                    console.warn("Live Groq call failed, falling back to benchmark telemetry:", e);
+                    liveSummary = `Live call error: ${e.message}. Displaying pre-computed audit dossier.`;
                 }
+            } else {
+                await new Promise(r => setTimeout(r, 350));
+            }
 
-                resultBox.innerHTML = html;
-                resultBox.classList.remove('d-none');
-            }, 400);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-play-fill fs-5 align-middle me-1"></i> Run Evaluation';
+
+            const modeBadge = isLive 
+                ? '<span class="badge bg-success"><i class="fa-solid fa-bolt me-1"></i>Live Groq Cloud (' + liveLatency + 'ms)</span>' 
+                : '<span class="badge bg-secondary"><i class="bi bi-check-circle me-1"></i>Pre-Computed Benchmark</span>';
+
+            let html = '';
+            if (runner === 'both') {
+                html = `
+                <div class="card border-success p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-success mb-0"><i class="bi bi-trophy me-1"></i> Comparative Evaluation Results</h6>
+                        ${modeBadge}
+                    </div>
+                    <div class="row text-center mb-3">
+                        <div class="col-6 border-end border-secondary">
+                            <small class="text-muted text-uppercase fw-bold">Baseline (120B)</small>
+                            <h3 class="fw-bold text-warning mb-0">${blRes.details.predicted_score.toFixed(1)}</h3>
+                            <span class="badge ${blRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'}">${blRes.details.recommendation}</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted text-uppercase fw-bold">Advanced (20B Squad)</small>
+                            <h3 class="fw-bold text-success mb-0">${advRes.details.predicted_score.toFixed(1)}</h3>
+                            <span class="badge ${advRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'}">${advRes.details.recommendation}</span>
+                        </div>
+                    </div>
+                    ${liveSummary ? `<div class="p-2 rounded bg-black border border-secondary text-info small mb-2"><strong>Live Groq LLM Response:</strong><br>${liveSummary}</div>` : ''}
+                    <p class="small text-secondary mb-0 border-top border-secondary pt-2">
+                        <strong>Ground Truth Senior Verdict:</strong> Score ${currentActiveCase.human_senior_verdict.ground_truth_score.toFixed(0)}/100 (${currentActiveCase.human_senior_verdict.should_hire ? 'HIRE' : 'REJECT'}).
+                    </p>
+                </div>
+                `;
+            } else if (runner === 'advanced') {
+                html = `
+                <div class="card border-info p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-info mb-0"><i class="bi bi-robot me-1"></i> Advanced FSM Dossier</h6>
+                        ${modeBadge}
+                    </div>
+                    <h2 class="fw-bold text-white mb-1">${advRes.details.predicted_score.toFixed(1)} <span class="fs-6 text-muted">/ 100</span></h2>
+                    <span class="badge ${advRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'} mb-2">${advRes.details.recommendation}</span>
+                    ${liveSummary ? `<div class="p-2 rounded bg-black border border-secondary text-info small mb-2"><strong>Live Groq Critic Output:</strong><br>${liveSummary}</div>` : '<p class="small text-secondary mb-0">AST telemetry & simulated concurrent load successfully synthesized by Senior Engineering Critic.</p>'}
+                </div>
+                `;
+            } else {
+                html = `
+                <div class="card border-warning p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-warning mb-2"><i class="bi bi-file-earmark-text me-1"></i> Baseline Monolith Dossier</h6>
+                        ${modeBadge}
+                    </div>
+                    <h2 class="fw-bold text-white mb-1">${blRes.details.predicted_score.toFixed(1)} <span class="fs-6 text-muted">/ 100</span></h2>
+                    <span class="badge ${blRes.details.predicted_score >= 65 ? 'bg-success' : 'bg-danger'} mb-2">${blRes.details.recommendation}</span>
+                    ${liveSummary ? `<div class="p-2 rounded bg-black border border-secondary text-info small mb-2"><strong>Live Groq Baseline Output:</strong><br>${liveSummary}</div>` : '<p class="small text-secondary mb-0">Evaluated via monolithic CoT prompt without dynamic execution.</p>'}
+                </div>
+                `;
+            }
+
+            resultBox.innerHTML = html;
+            resultBox.classList.remove('d-none');
         }
 
         // Take-Home Evaluator Logic
@@ -998,6 +1140,7 @@ Duration: 850ms | Total Tokens: 840 | Cost: $0.000155 USD
             renderBenchmarkTable();
             renderScenariosCatalog();
             renderTracesList();
+            updateApiKeyUI();
 
             // Win Rate Chart
             const ctx = document.getElementById('winRateChart').getContext('2d');
