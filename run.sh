@@ -39,7 +39,7 @@ show_menu() {
     echo -e "${BOLD}Select an action to execute:${NC}"
     echo -e "  ${GREEN}1)${NC} 🧪 Run Baseline on Single Repository (with full Step-by-Step trace)"
     echo -e "  ${GREEN}2)${NC} 🤖 Run Advanced Solution on Single Repository (FSM Multi-Agent)"
-    echo -e "  ${GREEN}3)${NC} 📊 Run Complete Benchmark (Baseline vs Advanced on 10 Cases)"
+    echo -e "  ${GREEN}3)${NC} 📊 Run Complete Benchmark (Baseline vs Advanced on 15 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Web Git Repository (e.g. GitHub URL)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Traces (Rich Terminal Viewer)"
     echo -e "  ${GREEN}6)${NC} 🧪 Run Pytest Test Suite"
@@ -61,6 +61,11 @@ show_cases_menu() {
     echo -e "  ${CYAN}8)${NC}  pallets/werkzeug (Dynamic SQL Injection Vulnerability)"
     echo -e "  ${CYAN}9)${NC}  marshmallow-code/marshmallow (Public Response Contract Breaking Drift)"
     echo -e "  ${CYAN}10)${NC} encode/databases (The Reverse Lock Order Distributed Deadlock 🔥)"
+    echo -e "  ${CYAN}11)${NC} urllib3/urllib3 (Unpooled HTTP Session Recreation File Descriptor Leak)"
+    echo -e "  ${CYAN}12)${NC} fastapi/fastapi (Event Loop CPU Starvation via Cryptographic Hashing)"
+    echo -e "  ${CYAN}13)${NC} django/django (N+1 Database Query Cascade in Serializer Loop)"
+    echo -e "  ${CYAN}14)${NC} encode/uvicorn (Graceful Shutdown with In-Flight Request Draining)"
+    echo -e "  ${CYAN}15)${NC} aio-libs/aiohttp (Unbounded Outbound Microservice Call Cascading Failure)"
     echo ""
 }
 
@@ -77,7 +82,7 @@ while true; do
             show_header
             echo -e "${BOLD}${YELLOW}🧪 BASELINE EVALUATION (STEP-BY-STEP TRACE)${NC}\n"
             show_cases_menu
-            read -p "Enter case number [1-10]: " case_num
+            read -p "Enter case number [1-15]: " case_num
             case_num=${case_num:-1}
             echo ""
             python3 -m eval.harness --runner baseline --case "$case_num" --verbose
@@ -88,7 +93,7 @@ while true; do
             show_header
             echo -e "${BOLD}${CYAN}🤖 ADVANCED FSM EVALUATION${NC}\n"
             show_cases_menu
-            read -p "Enter case number [1-10]: " case_num
+            read -p "Enter case number [1-15]: " case_num
             case_num=${case_num:-1}
             echo ""
             python3 -m eval.harness --runner advanced --case "$case_num" --verbose
@@ -96,7 +101,7 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         3)
-            echo -e "${CYAN}Running Full Comparative Benchmark (10 cases)...${NC}"
+            echo -e "${CYAN}Running Full Comparative Benchmark (15 cases)...${NC}"
             python3 -m eval.harness --runner both
             echo ""
             read -p "Press [Enter] to continue..."
@@ -123,9 +128,9 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         7)
-            echo -e "${CYAN}🚀 Starting Django Web Dashboard on http://127.0.0.1:8000...${NC}"
+            echo -e "${CYAN}🚀 Starting Static Web Dashboard on http://127.0.0.1:8000...${NC}"
             echo -e "${YELLOW}Press [Ctrl+C] to stop the web server when done.${NC}\n"
-            python3 manage.py runserver 127.0.0.1:8000
+            python3 -m http.server 8000 --directory docs/
             ;;
         8)
             echo -e "${YELLOW}Cleaning cache files and temporary traces...${NC}"
