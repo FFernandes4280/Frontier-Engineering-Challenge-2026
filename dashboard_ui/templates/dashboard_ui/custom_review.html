@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Web Git Repository Reviewer — micro1 Challenge{% endblock %}
+{% block title %}Take-Home Project & Full Repo Reviewer — micro1 Challenge{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-4">
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">🌐 Web Git Repository & Pull Request Reviewer</h2>
-        <p class="text-muted mb-0">Evaluate any live public or private GitHub repository URL on-demand using Polyglot AST analysis.</p>
+        <h2 class="fw-bold mb-1">📦 Take-Home Project & Full Repository Evaluator</h2>
+        <p class="text-muted mb-0">Evaluate candidates' take-home assignment repositories or full open-source codebases on-demand using Polyglot AST analysis and multi-agent synthesis.</p>
     </div>
 
     {% if error %}
@@ -18,35 +18,38 @@
     <!-- Input Form Card -->
     <div class="card shadow-sm mb-4 border-info">
         <div class="card-header bg-info bg-opacity-10 border-info py-3">
-            <h5 class="mb-0 fw-bold text-info"><i class="bi bi-git me-2"></i> Ingest & Review Remote Repository</h5>
+            <h5 class="mb-0 fw-bold text-info"><i class="bi bi-git me-2"></i> Ingest & Evaluate Full Take-Home Repository</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="{% url 'custom_review' %}">
                 {% csrf_token %}
                 <div class="row g-3">
-                    <div class="col-md-7">
-                        <label class="form-label small fw-bold text-muted">GitHub Repository URL:</label>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted">Target GitHub Repository URL (Candidate Take-Home Project):</label>
                         <div class="input-group">
                             <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-github"></i></span>
-                            <input type="url" name="repo_url" class="form-control bg-dark text-white border-secondary" placeholder="https://github.com/FFernandes4280/development-tools" value="{{ repo_url }}" required>
+                            <input type="url" name="repo_url" class="form-control bg-dark text-white border-secondary" placeholder="https://github.com/FFernandes4280/development-tools" value="{{ repo_url|default:'https://github.com/FFernandes4280/development-tools.git' }}" required>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label small fw-bold text-muted">Branch / Commit Hash:</label>
-                        <input type="text" name="commit_hash" class="form-control bg-dark text-white border-secondary" placeholder="HEAD" value="{{ commit_hash|default:'HEAD' }}">
+                        <label class="form-label small fw-bold text-muted">Evaluation Scope / Mode:</label>
+                        <select name="mode" class="form-select bg-dark text-white border-secondary">
+                            <option value="full_repo" {% if mode == 'full_repo' or not mode %}selected{% endif %}>📦 Full Take-Home Project (All Modules)</option>
+                            <option value="diff" {% if mode == 'diff' %}selected{% endif %}>🔀 Incremental PR / Commit Diff</option>
+                        </select>
                     </div>
-                    <div class="col-md-2">
-                        <label class="form-label small fw-bold text-muted">Runner:</label>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Evaluation Engine:</label>
                         <select name="runner" class="form-select bg-dark text-white border-secondary">
-                            <option value="both" selected>Both</option>
-                            <option value="advanced">Advanced</option>
-                            <option value="baseline">Baseline</option>
+                            <option value="both" selected>🏆 Both (Comparative Benchmark)</option>
+                            <option value="advanced">🤖 Advanced Solution (20B FSM Squad)</option>
+                            <option value="baseline">🧪 Baseline Solution (120B Monolith)</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-3 text-end">
                     <button type="submit" class="btn btn-info fw-bold px-4">
-                        <i class="bi bi-play-circle-fill me-1"></i> Ingest & Evaluate Code
+                        <i class="bi bi-play-circle-fill me-1"></i> Ingest Repository AST & Run Evaluation Squad
                     </button>
                 </div>
             </form>
@@ -57,22 +60,44 @@
     {% if success %}
     <div class="card shadow-sm border-success mb-4">
         <div class="card-header bg-success bg-opacity-25 border-success py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold text-success"><i class="bi bi-check-circle me-2"></i> Review Completed for {{ spec.scenario_id }}</h5>
-            <span class="badge bg-dark">{{ spec.existing_codebase_map|length }} Polyglot AST Modules Mapped</span>
+            <div>
+                <span class="badge bg-success me-2">Take-Home Vetting Complete</span>
+                <h5 class="d-inline mb-0 fw-bold text-white">{{ spec.title }}</h5>
+            </div>
+            <span class="badge bg-dark border border-secondary text-info">{{ spec.existing_codebase_map|length }} Polyglot Modules Parsed</span>
         </div>
         <div class="card-body">
+            
+            <!-- Codebase AST Breakdown -->
+            <div class="p-3 mb-4 rounded bg-dark border border-secondary">
+                <h6 class="fw-bold text-info mb-2"><i class="bi bi-diagram-2 me-1"></i> Ingested Project Codebase Structure:</h6>
+                <div style="max-height: 160px; overflow-y: auto;">
+                    <ul class="list-unstyled mb-0 small">
+                        {% for path, desc in spec.existing_codebase_map.items %}
+                        <li class="mb-1">
+                            <code class="text-warning">{{ path }}</code>: <span class="text-secondary">{{ desc }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
             <div class="row g-4">
                 <!-- Baseline Output -->
                 {% if results.baseline %}
                 <div class="col-lg-6">
                     <div class="card h-100 border-warning">
-                        <div class="card-header bg-warning bg-opacity-10 border-warning py-2">
-                            <h6 class="mb-0 fw-bold text-warning">🧪 Baseline Single-Prompt Reviewer</h6>
+                        <div class="card-header bg-warning bg-opacity-10 border-warning py-2 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-warning">🧪 Baseline Single-Prompt Reviewer (120B)</h6>
+                            <span class="badge bg-dark text-muted">{{ results.baseline.duration_ms|floatformat:0 }}ms</span>
                         </div>
                         <div class="card-body">
-                            <h3 class="fw-bold text-white mb-1">{{ results.baseline.dossier.overall_vetting_score }} / 100</h3>
-                            <span class="badge {% if results.baseline.dossier.recommendation == 'HIRE' %}bg-success{% else %}bg-danger{% endif %} mb-3">{{ results.baseline.dossier.recommendation }}</span>
+                            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                <h2 class="fw-bold text-white mb-0">{{ results.baseline.dossier.overall_vetting_score }} <span class="fs-6 text-muted">/ 100</span></h2>
+                                <span class="badge {% if results.baseline.dossier.recommendation == 'HIRE' %}bg-success{% else %}bg-danger{% endif %} fs-6">{{ results.baseline.dossier.recommendation }}</span>
+                            </div>
                             <hr class="border-secondary">
+                            <h6 class="fw-bold text-warning small text-uppercase mb-1">Executive Summary:</h6>
                             <p class="small text-secondary mb-0">{{ results.baseline.dossier.executive_summary }}</p>
                         </div>
                     </div>
@@ -83,13 +108,24 @@
                 {% if results.advanced %}
                 <div class="col-lg-6">
                     <div class="card h-100 border-info">
-                        <div class="card-header bg-info bg-opacity-10 border-info py-2">
-                            <h6 class="mb-0 fw-bold text-info">🤖 Advanced FSM Multi-Agent Squad</h6>
+                        <div class="card-header bg-info bg-opacity-10 border-info py-2 d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-bold text-info">🤖 Advanced FSM Multi-Agent Squad (20B)</h6>
+                            <span class="badge bg-dark text-success">{{ results.advanced.duration_ms|floatformat:0 }}ms &bull; ${{ results.advanced.cost_usd|floatformat:6 }}</span>
                         </div>
                         <div class="card-body">
-                            <h3 class="fw-bold text-white mb-1">{{ results.advanced.dossier.overall_vetting_score }} / 100</h3>
-                            <span class="badge {% if results.advanced.dossier.recommendation == 'HIRE' %}bg-success{% else %}bg-danger{% endif %} mb-3">{{ results.advanced.dossier.recommendation }}</span>
+                            <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                <div>
+                                    <h2 class="fw-bold text-white mb-0">{{ results.advanced.dossier.overall_vetting_score }} <span class="fs-6 text-muted">/ 100</span></h2>
+                                    <span class="badge {% if results.advanced.dossier.recommendation == 'HIRE' or results.advanced.dossier.recommendation == 'STRONG_HIRE' %}bg-success{% else %}bg-danger{% endif %} fs-6">{{ results.advanced.dossier.recommendation }}</span>
+                                </div>
+                                <div class="text-end small text-muted">
+                                    <div>Architecture: <strong>{{ results.advanced.dossier.architecture_score }}</strong></div>
+                                    <div>Concurrency: <strong>{{ results.advanced.dossier.concurrency_scalability_score }}</strong></div>
+                                    <div>Code Quality: <strong>{{ results.advanced.dossier.code_quality_reusability_score }}</strong></div>
+                                </div>
+                            </div>
                             <hr class="border-secondary">
+                            <h6 class="fw-bold text-info small text-uppercase mb-1">Senior Critic Technical Synthesis:</h6>
                             <p class="small text-secondary mb-0">{{ results.advanced.dossier.executive_summary }}</p>
                         </div>
                     </div>

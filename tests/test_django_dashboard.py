@@ -22,7 +22,7 @@ def test_cases_list_view():
     client = Client()
     response = client.get("/cases/")
     assert response.status_code == 200
-    assert "10 Benchmark Scenarios Catalog" in response.content.decode("utf-8")
+    assert "Benchmark Scenarios Catalog" in response.content.decode("utf-8")
 
 
 def test_case_detail_view():
@@ -34,11 +34,11 @@ def test_case_detail_view():
 
 
 def test_custom_review_view():
-    """Test custom web review view returns 200."""
+    """Test take-home project repository review view returns 200."""
     client = Client()
     response = client.get("/custom-review/")
     assert response.status_code == 200
-    assert "Web Git Repository" in response.content.decode("utf-8")
+    assert "Take-Home Project" in response.content.decode("utf-8")
 
 
 def test_traces_viewer_view():

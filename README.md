@@ -27,20 +27,21 @@
 
 ---
 
-## 💡 1. The Dual-Application Thesis
+## 💡 1. The Dual-Application & Dual-Mode Thesis
 
 This project implements a dual-use engine that solves two major software engineering bottlenecks using the exact same underlying FSM & Telemetry core:
 
 ```mermaid
 graph TD
-    A[Code Submission / Pull Request Diff] --> B[Deterministic FSM Engine]
+    A[Code Submission / PR Diff or Full Take-Home Repo] --> B[Deterministic FSM Engine & Polyglot AST]
     B --> C1[Application 1: micro1 Senior Candidate Vetting]
     B --> C2[Application 2: Automated CI/CD Principal Architect Gatekeeper]
-    C1 --> D1[Evidence-backed Senior Vetting Dossier for Hiring Managers]
-    C2 --> D2[Automated PR Merge Blocker & Concurrency SLA Validator]
+    C1 --> D1[Mode A: Incremental Pull Request Debugging]
+    C1 --> D2[Mode B: Full Repository Take-Home Project Assessment]
+    C2 --> D3[Automated PR Merge Blocker & Concurrency SLA Validator]
 ```
 
-1. **Senior Engineering Talent Marketplace Vetting (micro1):** Replaces superficial LeetCode puzzles and conversational chatbots with realistic distributed debugging dilemmas, scoring architectural trade-offs with 100% alignment against human senior consensus.
+1. **Senior Engineering Talent Marketplace Vetting (micro1):** Replaces superficial LeetCode puzzles with realistic distributed debugging dilemmas (PR diffs) **AND** full Take-Home assignment repository evaluations, scoring architectural trade-offs with 93.3% hiring accuracy against human senior consensus.
 2. **Enterprise CI/CD Pull Request Gatekeeper (GitHub / GitLab Actions):** Analyzes incoming PR branches before merging to production, automatically blocking changes that introduce memory bloat (`.all()`), async event loop starvation (`requests`), breaking public API contract drifts, or cross-shard distributed deadlocks.
 
 ---

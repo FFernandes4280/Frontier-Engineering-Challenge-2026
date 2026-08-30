@@ -1,102 +1,99 @@
-"""Django views for micro1 Frontier Engineering Challenge Web Dashboard."""
+"""Django View Handlers for the micro1 Senior Vetting Benchmark Web Dashboard."""
 
 import os
 import json
 import asyncio
-from typing import List, Dict, Any
-from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
+from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 
-from src.core.domain import ScenarioSpec, CandidateSubmission, SeniorVettingDossier, RecommendationType
+from src.core.domain import ScenarioSpec, CandidateSubmission
 from src.baseline.runner import BaselineVettingRunner
 from src.agents.orchestrator_fsm import HolisticVettingOrchestrator
 from src.tools.git_importer import GitRepoImporter
-from eval.metrics import compute_benchmark_summary, EvaluationResult
-
 
 DATASET_PATH = "eval/dataset/cases.json"
-TRACES_DIR = "./traces"
+BENCHMARK_RESULTS_PATH = "eval/benchmark_results.json"
+TRACES_DIR = "traces"
 
 
-def load_dataset() -> List[Dict[str, Any]]:
-    """Loads benchmark test cases from JSON file."""
-    if not os.path.exists(DATASET_PATH):
-        return []
-    with open(DATASET_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+def _load_cases():
+    if os.path.exists(DATASET_PATH):
+        with open(DATASET_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
 
-def index(request):
-    """Main Dashboard Overview."""
-    cases = load_dataset()
-    baseline_model = os.getenv("BASELINE_MODEL", "groq/openai/gpt-oss-120b")
-    advanced_model = os.getenv("ADVANCED_MODEL", "groq/qwen/qwen3.8-27b")
+def _load_benchmark_results():
+    if os.path.exists(BENCHMARK_RESULTS_PATH):
+        with open(BENCHMARK_RESULTS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
-    # Load latest benchmark results if available
-    benchmark_data = {}
-    if os.path.exists("eval/benchmark_results.json"):
-        try:
-            with open("eval/benchmark_results.json", "r", encoding="utf-8") as f:
-                benchmark_data = json.load(f)
-        except Exception:
-            pass
+
+def index_view(request):
+    """Main Overview Dashboard with benchmark stats, KPIs, and case distribution."""
+    cases = _load_cases()
+    results = _load_benchmark_results()
+
+    total_cases = len(cases)
+    summaries = results.get("summaries", {}) if results else {}
+
+    baseline_summary = summaries.get("baseline", {})
+    advanced_summary = summaries.get("advanced", {})
 
     context = {
-        "cases_count": len(cases),
+        "total_cases": total_cases,
         "cases": cases,
-        "baseline_model": baseline_model,
-        "advanced_model": advanced_model,
-        "benchmark": benchmark_data.get("summaries", {}),
+        "benchmark_results": results,
+        "baseline_summary": baseline_summary,
+        "advanced_summary": advanced_summary,
+        "delta_accuracy": round((advanced_summary.get("success_rate_pct", 0) - baseline_summary.get("success_rate_pct", 0)), 1),
+        "delta_fidelity": round((advanced_summary.get("average_score", 0) - baseline_summary.get("average_score", 0)) * 100, 1),
     }
     return render(request, "dashboard_ui/index.html", context)
 
 
-def cases_list(request):
-    """Catalog of all 10 SWE-bench open source cases."""
-    cases = load_dataset()
+def cases_list_view(request):
+    """List of all 15 SWE-bench grounded scenarios with filter by status/difficulty."""
+    cases = _load_cases()
     return render(request, "dashboard_ui/cases_list.html", {"cases": cases})
 
 
-def case_detail(request, case_id):
-    """Detailed view of a single benchmark test case."""
-    cases = load_dataset()
+def case_detail_view(request, case_id):
+    """Deep-dive inspector for a single scenario with live interactive evaluation runner."""
+    cases = _load_cases()
     target_case = next((c for c in cases if c["case_id"] == case_id), None)
     if not target_case:
-        return redirect("cases_list")
+        raise Http404(f"Scenario {case_id} not found.")
 
-    # Determine diff text
-    sub = target_case.get("submission", {})
-    full_diff = sub.get("full_diff", "")
-    if not full_diff and "file_changes" in sub:
-        full_diff = "\n".join([fc.get("diff_content", "") for fc in sub["file_changes"]])
+    spec = target_case.get("spec", {})
+    full_diff = target_case.get("submission", {}).get("full_diff", "")
+    ground_truth = target_case.get("human_senior_verdict", {})
 
     context = {
         "case": target_case,
-        "spec": target_case.get("spec", {}),
-        "submission": sub,
+        "spec": spec,
         "full_diff": full_diff,
-        "ground_truth": target_case.get("human_senior_verdict", {}),
-        "baseline_model": os.getenv("BASELINE_MODEL", "groq/openai/gpt-oss-120b"),
-        "advanced_model": os.getenv("ADVANCED_MODEL", "groq/qwen/qwen3.8-27b"),
+        "ground_truth": ground_truth,
     }
     return render(request, "dashboard_ui/case_detail.html", context)
 
 
 @csrf_exempt
 def run_case_api(request, case_id):
-    """AJAX API to evaluate a single case with Baseline, Advanced, or Both."""
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    cases = load_dataset()
+    """Async API endpoint to execute either Baseline or Advanced runner against a case."""
+    cases = _load_cases()
     target_case = next((c for c in cases if c["case_id"] == case_id), None)
     if not target_case:
-        return JsonResponse({"error": "Case not found"}, status=404)
+        return JsonResponse({"error": f"Scenario {case_id} not found."}, status=404)
 
-    try:
-        data = json.loads(request.body) if request.body else {}
-    except Exception:
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+    else:
         data = {}
 
     runner_type = data.get("runner", "both")
@@ -123,7 +120,7 @@ def run_case_api(request, case_id):
                 "tokens": logger_b.trajectory.total_tokens,
                 "cost_usd": logger_b.trajectory.total_cost_usd,
                 "model": runner_b.model,
-                "agreed_with_truth": (dossier_b.overall_vetting_score >= 70.0) == ground_truth.get("should_hire", True)
+                "agreed_with_truth": (dossier_b.overall_vetting_score >= 65.0) == ground_truth.get("should_hire", True)
             }
 
         if runner_type in ["advanced", "both"]:
@@ -134,7 +131,7 @@ def run_case_api(request, case_id):
                 "duration_ms": logger_a.trajectory.total_duration_ms,
                 "tokens": logger_a.trajectory.total_tokens,
                 "cost_usd": logger_a.trajectory.total_cost_usd,
-                "agreed_with_truth": (dossier_a.overall_vetting_score >= 70.0) == ground_truth.get("should_hire", True)
+                "agreed_with_truth": (dossier_a.overall_vetting_score >= 65.0) == ground_truth.get("should_hire", True)
             }
 
     asyncio.run(execute())
@@ -149,9 +146,10 @@ def run_case_api(request, case_id):
 
 @csrf_exempt
 def custom_review_view(request):
-    """Web Reviewer for any Custom Web Git Repository URL."""
+    """Take-Home Assignment & Full Git Repository Evaluator."""
     if request.method == "POST":
         repo_url = request.POST.get("repo_url", "").strip()
+        mode = request.POST.get("mode", "full_repo").strip()
         commit_hash = request.POST.get("commit_hash", "HEAD").strip() or "HEAD"
         runner_type = request.POST.get("runner", "both")
 
@@ -159,7 +157,7 @@ def custom_review_view(request):
             return render(request, "dashboard_ui/custom_review.html", {"error": "Repository URL is required."})
 
         try:
-            importer = GitRepoImporter(repo_url=repo_url, target_commit=commit_hash)
+            importer = GitRepoImporter(repo_url=repo_url, target_commit=commit_hash, mode=mode)
             spec, submission = importer.ingest()
 
             results = {}
@@ -190,6 +188,7 @@ def custom_review_view(request):
 
             return render(request, "dashboard_ui/custom_review.html", {
                 "repo_url": repo_url,
+                "mode": mode,
                 "commit_hash": commit_hash,
                 "spec": spec.model_dump(),
                 "submission": submission.model_dump(),
@@ -218,10 +217,8 @@ def traces_viewer(request):
         with open(os.path.join(TRACES_DIR, selected_file), "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-    context = {
-        "files": trace_files,
+    return render(request, "dashboard_ui/traces_viewer.html", {
+        "trace_files": trace_files,
         "selected_file": selected_file,
-        "content": content,
-        "is_md": selected_file.endswith(".md")
-    }
-    return render(request, "dashboard_ui/traces_viewer.html", context)
+        "content": content
+    })
