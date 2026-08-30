@@ -75,7 +75,6 @@ Our **Holistic Multi-Agent FSM Solution** executes a multi-dimensional assessmen
 ---
 
 ## 🌐 3. Open-Source Grounded Benchmark Suite (15 Codebases)
-## 🌐 3. Open-Source Grounded Benchmark Suite (20 Real-World Codebases)
 
 Each benchmark scenario is extracted from **real architectural regressions and canonical PR fixes** in major open-source repositories (SWE-bench style):
 
@@ -96,33 +95,21 @@ Each benchmark scenario is extracted from **real architectural regressions and c
 | **13** | [`django/django`](https://github.com/django/django) | `v4.2.0 -> v4.2.1` | N+1 database query cascade in nested serializer loops | [PR #16800](https://github.com/django/django/pull/16800) |
 | **14** | [`encode/uvicorn`](https://github.com/encode/uvicorn) | `v0.22.0 -> v0.23.0` | Abrupt SIGTERM server shutdown dropping in-flight requests | [PR #1980](https://github.com/encode/uvicorn/pull/1980) |
 | **15** | [`aio-libs/aiohttp`](https://github.com/aio-libs/aiohttp) | `v3.8.4 -> v3.8.5` | Unbounded outbound microservice HTTP calls cascading failure | [PR #7340](https://github.com/aio-libs/aiohttp/pull/7340) |
-| **16** | [`encode/starlette`](https://github.com/encode/starlette) | `v0.26.0 -> v0.26.1` | WebSocket connection map race condition & unsynchronized global mutation | [PR #1920](https://github.com/encode/starlette) |
-| **17** | [`fastapi/fastapi`](https://github.com/fastapi/fastapi) | `v0.96.0 -> v0.96.1` | Global unbounded webhook buffer causing insidious memory leaks | [PR #9820](https://github.com/fastapi/fastapi) |
-| **18** | [`django/django`](https://github.com/django/django) | `v4.2.2 -> v4.2.3` | Cyclic service-layer dependency injection locking application startup | [PR #17100](https://github.com/django/django) |
-| **19** | [`aio-libs/aiohttp`](https://github.com/aio-libs/aiohttp) | `v3.8.6 -> v3.8.7` | Unawaited async background task silently destroyed by Garbage Collector | [PR #7510](https://github.com/aio-libs/aiohttp) |
-| **20** | [`encode/starlette`](https://github.com/encode/starlette) | `v0.27.0 -> v0.27.1` | Unpaginated database fetch overloading JSON serialization memory | [PR #2050](https://github.com/encode/starlette) |
 
 ---
 
 ## 🏛️ 4. Agent Architecture & Finite State Machine (FSM)
 
 The system is governed by a **Deterministic Finite State Machine (FSM)** preventing uncontrolled loops and providing strict verification boundaries:
-The system is governed by a **Deterministic Finite State Machine (FSM)** with dynamic AST navigation via Tool Calling and LLM Override Authority:
 
 ```mermaid
 stateDiagram-v2
     [*] --> INITIALIZING: Load Scenario & Architectural SLAs
-    [*] --> INITIALIZING: Load Scenario, Polyglot AST & SLAs
     INITIALIZING --> ANALYZING: Ingest Candidate Git Diff & Codebase
     ANALYZING --> EXECUTING_TOOLS: Trigger AST, Blast Radius & Context Inspector
     EXECUTING_TOOLS --> VERIFYING: Run Concurrency Load & Security Verification
-    ANALYZING --> EXECUTING_TOOLS: Trigger AST Blast Radius & Context Inspector
-    EXECUTING_TOOLS --> VERIFYING: Run Semantic LLM Verifier & Load Prediction
-    VERIFYING --> INSPECTING_CODE: Surgical Tool Call (read_module_code)
-    INSPECTING_CODE --> VERIFYING: AST Sub-Tree Injected
     VERIFYING --> HUMAN_CHECKPOINT: Borderline Score (45-65) Sign-off
     VERIFYING --> COMPLETED: Final Dossier Generated (Score <45 or >=65)
-    VERIFYING --> COMPLETED: Override Authority or Final Dossier Signed
     HUMAN_CHECKPOINT --> COMPLETED: Reviewer Approved
     COMPLETED --> [*]
 ```
@@ -132,15 +119,11 @@ stateDiagram-v2
 ## 🤖 5. The Specialized Multi-Agent Squad
 
 | Agent | Core Responsibility | Tooling & Heuristics |
-| Agent | Core Responsibility | Tooling & Mechanism |
 | :--- | :--- | :--- |
 | **1. Scenario & Architecture Provisioner** | Packages scenario context, distributed topology, and non-functional requirements (P95 latency, max memory, consistency model). | Scenario Spec Catalog, SLA Definition Engine |
 | **2. Code Evolution & Context Alignment Agent** | Evaluates blast radius, cyclomatic complexity delta, API backwards compatibility, and detects whether candidate reused existing codebase modules. | `BlastRadiusAnalyzer`, `ContextInspector` (AST Pattern Matcher) |
 | **3. Static, Security & Load Performance Verifier** | Simulates concurrent traffic load (50+ users, 2000 RPS), detects distributed deadlocks, event loop blocking, memory spikes, and static OWASP vulnerabilities. | `LoadSimulator`, `SecurityScanner` |
 | **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (`groq/openai/gpt-oss-20b` / `gemini-3.6-flash`) |
-| **2. Code Evolution & Context Alignment Agent** | Evaluates blast radius, cyclomatic complexity delta, API backwards compatibility, and detects whether candidate reused existing codebase modules. | `BlastRadiusAnalyzer`, `ContextInspector` (Polyglot AST Pattern Matcher) |
-| **3. Semantic LLM Security & Load Verifier** | Performs deep semantic LLM analysis predicting concurrent traffic behavior (2000 RPS), detecting distributed deadlocks, event loop blocking, memory spikes, and static OWASP vulnerabilities without rigid regex rules. | `CodeVerifierAgent`, `LoadSimulator` (Semantic LLM Sub-Routines) |
-| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. Holds **LLM Override Authority ("Break the Glass")** to bypass heuristic formula scores when severe hidden flaws are detected. | `SeniorEngineeringCriticAgent` (`groq/openai/gpt-oss-20b`) |
 
 ---
 
