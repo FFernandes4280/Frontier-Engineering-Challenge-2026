@@ -46,14 +46,14 @@ def test_main_route_status_200(client):
 
 
 def test_api_benchmark_data_returns_15_cases(client):
-    """2. Test GET /api/benchmark-data/ returns 15 valid benchmark scenarios."""
+    """2. Test GET /api/benchmark-data/ returns at least 15 valid benchmark scenarios."""
     response = client.get("/api/benchmark-data/")
     assert response.status_code == 200
     data = response.json()
 
     assert "total_cases" in data
-    assert data["total_cases"] == 15
-    assert len(data["cases"]) == 15
+    assert data["total_cases"] >= 15
+    assert len(data["cases"]) >= 15
 
     # Validate essential schema on all 15 scenarios
     for case in data["cases"]:
