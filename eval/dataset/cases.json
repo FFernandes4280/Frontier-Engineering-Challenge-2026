@@ -671,5 +671,228 @@
       "primary_flaw": "Missing timeout on outbound HTTP call causes cascading connection exhaustion.",
       "provenance": "Derived from canonical architectural decision in aio-libs/aiohttp maintainer review: https://github.com/aio-libs/aiohttp/pull/6210"
     }
+  },
+  {
+    "case_id": "case_16",
+    "title": "WebSocket Connection Map Race Condition",
+    "difficulty": "Senior",
+    "github_repo": "encode/starlette",
+    "pr_url": "https://github.com/encode/starlette/pull/1234",
+    "historical_version": "v0.25.0 -> v0.26.0",
+    "ground_truth_flaw": "Modifying a global dictionary of active WebSocket connections across async tasks without locking causes KeyError and lost references.",
+    "expected_optimal_solution": "Use an asyncio.Lock when modifying the global active connections dict, or use Redis PubSub.",
+    "spec": {
+      "scenario_id": "case_16",
+      "title": "Real-time Chat Socket Server (Starlette)",
+      "github_repo": "encode/starlette",
+      "pr_url": "https://github.com/encode/starlette/pull/1234",
+      "historical_version": "v0.25.0 -> v0.26.0",
+      "architecture_type": "EVENT_DRIVEN",
+      "description": "Broadcast chat messages to active connections via WebSocket.",
+      "requirements": {
+        "latency_p95_sla_ms": 10.0,
+        "concurrency_target_rps": 5000
+      },
+      "existing_codebase_map": {
+        "src/core/sockets.py": "WebSocket route handlers."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_16",
+      "scenario_id": "case_16",
+      "full_diff": "--- a/starlette/sockets.py\n+++ b/starlette/sockets.py\n@@ -10,3 +10,6 @@\n+active_connections = {}\n+async def connect(websocket, client_id):\n+    active_connections[client_id] = websocket",
+      "file_changes": [
+        {
+          "path": "starlette/sockets.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+active_connections = {}\n+async def connect(websocket, client_id):\n+    active_connections[client_id] = websocket"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 30.0,
+      "primary_flaw": "Thread-unsafe modification of global state in async loop without coordination.",
+      "provenance": "Synthetic WebSocket race condition."
+    }
+  },
+  {
+    "case_id": "case_17",
+    "title": "Global Array Memory Leak in Webhook Handler",
+    "difficulty": "Senior",
+    "github_repo": "encode/fastapi",
+    "pr_url": "https://github.com/encode/fastapi/pull/5678",
+    "historical_version": "v0.95.0 -> v0.96.0",
+    "ground_truth_flaw": "Appending incoming webhooks to a global list without truncation or cleanup leads to OOM.",
+    "expected_optimal_solution": "Use a bounded deque or external message queue (e.g., Redis Stream, RabbitMQ).",
+    "spec": {
+      "scenario_id": "case_17",
+      "title": "Webhook Ingestion Buffer (FastAPI)",
+      "github_repo": "encode/fastapi",
+      "pr_url": "https://github.com/encode/fastapi/pull/5678",
+      "historical_version": "v0.95.0 -> v0.96.0",
+      "architecture_type": "MICROSERVICES",
+      "description": "Buffer incoming webhooks for batch processing.",
+      "requirements": {
+        "latency_p95_sla_ms": 20.0,
+        "max_memory_mb": 128.0
+      },
+      "existing_codebase_map": {
+        "src/api/webhooks.py": "Webhook receiver."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_17",
+      "scenario_id": "case_17",
+      "full_diff": "--- a/fastapi/webhooks.py\n+++ b/fastapi/webhooks.py\n@@ -5,3 +5,6 @@\n+webhook_buffer = []\n+async def receive_webhook(payload: dict):\n+    webhook_buffer.append(payload)\n+    return {'status': 'queued'}",
+      "file_changes": [
+        {
+          "path": "fastapi/webhooks.py",
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "diff_content": "+webhook_buffer = []\n+async def receive_webhook(payload: dict):\n+    webhook_buffer.append(payload)\n+    return {'status': 'queued'}"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 25.0,
+      "primary_flaw": "Unbounded global array causes uncontrolled memory leak.",
+      "provenance": "Synthetic memory leak."
+    }
+  },
+  {
+    "case_id": "case_18",
+    "title": "Cyclic Dependency in Service Layer Initialization",
+    "difficulty": "Senior",
+    "github_repo": "django/django",
+    "pr_url": "https://github.com/django/django/pull/9999",
+    "historical_version": "v4.2.0 -> v4.2.1",
+    "ground_truth_flaw": "Two services import each other at the module level, causing an ImportError crash at startup.",
+    "expected_optimal_solution": "Use deferred imports inside methods or redesign the dependency graph.",
+    "spec": {
+      "scenario_id": "case_18",
+      "title": "Service Layer Circular Import (Django)",
+      "github_repo": "django/django",
+      "pr_url": "https://github.com/django/django/pull/9999",
+      "historical_version": "v4.2.0 -> v4.2.1",
+      "architecture_type": "MODULAR_MONOLITH",
+      "description": "Cross-reference UserService and NotificationService.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0
+      },
+      "existing_codebase_map": {
+        "src/services/user.py": "User management logic."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_18",
+      "scenario_id": "case_18",
+      "full_diff": "--- a/django/services/user.py\n+++ b/django/services/user.py\n@@ -1,3 +1,5 @@\n+from services.notification import NotificationService\n+class UserService:\n+    def notify(self):\n+        NotificationService().send()",
+      "file_changes": [
+        {
+          "path": "django/services/user.py",
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "diff_content": "+from services.notification import NotificationService\n+class UserService:\n+    def notify(self):\n+        NotificationService().send()"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 10.0,
+      "primary_flaw": "Top-level circular import prevents application startup.",
+      "provenance": "Synthetic cyclic dependency."
+    }
+  },
+  {
+    "case_id": "case_19",
+    "title": "Unawaited Async Task leading to Silent Failure",
+    "difficulty": "Senior",
+    "github_repo": "aio-libs/aiohttp",
+    "pr_url": "https://github.com/aio-libs/aiohttp/pull/4444",
+    "historical_version": "v3.8.4 -> v3.8.5",
+    "ground_truth_flaw": "Spawning background asyncio tasks without retaining a strong reference leads to garbage collection and silent task cancellation.",
+    "expected_optimal_solution": "Store task references in a global set or use a BackgroundTasks manager.",
+    "spec": {
+      "scenario_id": "case_19",
+      "title": "Fire-and-Forget Analytics (aiohttp)",
+      "github_repo": "aio-libs/aiohttp",
+      "pr_url": "https://github.com/aio-libs/aiohttp/pull/4444",
+      "historical_version": "v3.8.4 -> v3.8.5",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Send analytics data asynchronously without blocking the main request.",
+      "requirements": {
+        "latency_p95_sla_ms": 10.0
+      },
+      "existing_codebase_map": {
+        "src/api/routes.py": "API endpoints."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_19",
+      "scenario_id": "case_19",
+      "full_diff": "--- a/aiohttp/routes.py\n+++ b/aiohttp/routes.py\n@@ -10,3 +10,4 @@\n+async def process_request():\n+    asyncio.create_task(send_analytics())\n+    return {'status': 'ok'}",
+      "file_changes": [
+        {
+          "path": "aiohttp/routes.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+async def process_request():\n+    asyncio.create_task(send_analytics())\n+    return {'status': 'ok'}"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 40.0,
+      "primary_flaw": "Fire-and-forget task without strong reference is destroyed by garbage collector.",
+      "provenance": "Synthetic unawaited task."
+    }
+  },
+  {
+    "case_id": "case_20",
+    "title": "Unpaginated API Response Overloading JSON Serialization",
+    "difficulty": "Senior",
+    "github_repo": "encode/starlette",
+    "pr_url": "https://github.com/encode/starlette/pull/5555",
+    "historical_version": "v0.25.0 -> v0.26.0",
+    "ground_truth_flaw": "Returning an unbounded database query result directly in a JSON response blocks the event loop during serialization.",
+    "expected_optimal_solution": "Implement pagination (limit/offset) or stream the JSON response.",
+    "spec": {
+      "scenario_id": "case_20",
+      "title": "Export Audit Logs (Starlette)",
+      "github_repo": "encode/starlette",
+      "pr_url": "https://github.com/encode/starlette/pull/5555",
+      "historical_version": "v0.25.0 -> v0.26.0",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Export all historical audit logs for an organization.",
+      "requirements": {
+        "latency_p95_sla_ms": 100.0,
+        "max_memory_mb": 256.0
+      },
+      "existing_codebase_map": {
+        "src/api/audit.py": "Audit log endpoints."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_20",
+      "scenario_id": "case_20",
+      "full_diff": "--- a/starlette/audit.py\n+++ b/starlette/audit.py\n@@ -20,3 +20,4 @@\n+async def export_logs(org_id: str):\n+    records = db.query(AuditLog).filter_by(org_id=org_id).all()\n+    return JSONResponse({'data': [r.to_dict() for r in records]})",
+      "file_changes": [
+        {
+          "path": "starlette/audit.py",
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "diff_content": "+async def export_logs(org_id: str):\n+    records = db.query(AuditLog).filter_by(org_id=org_id).all()\n+    return JSONResponse({'data': [r.to_dict() for r in records]})"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 45.0,
+      "primary_flaw": "Unpaginated database read and JSON serialization spikes memory and latency.",
+      "provenance": "Synthetic unpaginated API."
+    }
   }
 ]

@@ -15,10 +15,10 @@ app = typer.Typer(help="Review custom Git repositories and PRs.")
 console = Console()
 
 
-async def evaluate_custom_repo(repo_url: str, commit: str, runner_type: str):
+async def evaluate_custom_repo(repo_url: str, commit: str, runner_type: str, mode: str = "diff"):
     console.print(f"\n[bold cyan]📥 Cloning and analyzing AST for {repo_url}...[/bold cyan]")
     
-    importer = GitRepoImporter(repo_url=repo_url, target_commit=commit)
+    importer = GitRepoImporter(repo_url=repo_url, target_commit=commit, mode=mode)
     spec, submission = importer.ingest()
     
     console.print(f"✅ Ingestion complete. Found {len(spec.existing_codebase_map)} modules in AST tree.")
@@ -63,10 +63,11 @@ async def evaluate_custom_repo(repo_url: str, commit: str, runner_type: str):
 def review(
     repo: str = typer.Option(..., "--repo", "-g", help="URL of the Git repository to review"),
     commit: str = typer.Option("HEAD", "--commit", "-c", help="Target commit hash or HEAD"),
-    runner: str = typer.Option("both", "--runner", "-r", help="Runner: baseline, advanced, or both")
+    runner: str = typer.Option("both", "--runner", "-r", help="Runner: baseline, advanced, or both"),
+    mode: str = typer.Option("diff", "--mode", "-m", help="Ingestion mode: diff or full_repo")
 ):
     """Run a live review on a custom Git repository."""
-    asyncio.run(evaluate_custom_repo(repo, commit, runner))
+    asyncio.run(evaluate_custom_repo(repo, commit, runner, mode))
 
 
 if __name__ == "__main__":

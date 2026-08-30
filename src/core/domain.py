@@ -76,6 +76,18 @@ class CandidateSubmission(BaseModel):
     full_diff: str = ""
     explanation_notes: str | None = None
 
+    def model_post_init(self, __context):
+        # Truncate full_diff if it exceeds 10000 chars (approx 2000 tokens)
+        if len(self.full_diff) > 10000:
+            half = 4000
+            self.full_diff = self.full_diff[:half] + "\n\n[...TRUNCATED DIFF DUE TO TOKEN LIMITS...]\n\n" + self.full_diff[-half:]
+        
+        # Truncate file_changes diff_content similarly to prevent JSON serialization explosion
+        for fc in self.file_changes:
+            if len(fc.diff_content) > 10000:
+                half = 4000
+                fc.diff_content = fc.diff_content[:half] + "\n\n[...TRUNCATED FILE DIFF...]\n\n" + fc.diff_content[-half:]
+
 
 class BlastRadiusMetrics(BaseModel):
     """Metrics evaluating how clean and focused the candidate's diff is."""
@@ -150,3 +162,5 @@ class SeniorVettingDossier(BaseModel):
     primary_flaws_flagged: list[str] = Field(default_factory=list)
     human_in_the_loop_approval_needed: bool = False
     evaluator_mode: str = "multi-agent-system"
+    override_authority_triggered: bool = False
+    override_justification: str = ""

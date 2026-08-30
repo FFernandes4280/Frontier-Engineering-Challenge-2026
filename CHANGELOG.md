@@ -10,3 +10,15 @@ This changelog connects each iterative architectural decision with empirical evi
 | **Iteration 3** | Added Dynamic Load & Concurrency Simulator (evaluating race conditions, memory spikes, deadlocks, and event loop blocking). | Accuracy jumped to 90.0%. Caught distributed deadlocks and in-memory cache drift. | **KEPT:** Essential for distributed systems evaluation. |
 | **Iteration 4** | Enforced provenance in evaluation verdicts and dynamic seniority rubrics. | Re-audit showed 100% compliance with Ground Truth citation and severity adaptation. | **KEPT:** Provides absolute auditability for human judges. |
 | **Final Squad** | Connected 4 specialized agents to Deterministic FSM Engine. | **100.0% Hiring Alignment Accuracy** and **87.8/100 Fidelity Score**. | **CONSOLIDATED:** Final architecture submitted. |
+
+## Janitorial & AST Pruning (2026-08-30)
+
+**Deleted the following files and directories:**
+
+- `sim.js`: Static mock file used for manual calculations.
+- `sim.py`: Static mock file used for manual calculations.
+- `test_api.py`: Abandoned test module snippet in root directory.
+- `patch_review_repo.py`: One-off patching script (dead code).
+- `src/tracing/viewer.py`: Old terminal-based trace viewer UI component (replaced by Django version `dashboard_ui`).
+- `eval/metrics/`: Unused empty directory.
+- Removed option 5 (`src.tracing.viewer`) from `run.sh` menu to accommodate the deleted UI component.

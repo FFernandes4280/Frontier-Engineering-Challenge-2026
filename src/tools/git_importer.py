@@ -208,8 +208,8 @@ class GitRepoImporter:
                 max_memory_mb=256.0
             ),
             existing_codebase_map=ast_map,
-            ground_truth_flaw="None - Full Take-Home Assessment",
-            expected_optimal_solution="Clean modular architecture, robust concurrency handling, and high testability."
+            ground_truth_flaw="UNKNOWN (You MUST identify any architectural flaws, security vulnerabilities, or anti-patterns)",
+            expected_optimal_solution="Identify and enumerate any critical vulnerabilities or architectural anti-patterns in the candidate diff."
         )
 
         submission = CandidateSubmission(

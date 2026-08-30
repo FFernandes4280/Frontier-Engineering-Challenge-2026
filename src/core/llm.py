@@ -1,11 +1,13 @@
 """Unified LLM interface with multi-model fallback pool and accurate Groq Cloud cost accounting."""
 
+import asyncio
 import logging
 import os
 import time
 from typing import Any
 
 import litellm
+from litellm.exceptions import RateLimitError
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
@@ -81,13 +83,11 @@ class LLMClient:
         validate_api_keys()
 
         requested_model = model or self.default_model
+        # Strictly prioritize gpt-oss family, disable silent fallbacks for inaccessible models (e.g., qwen, gemini)
         candidate_models = [
             requested_model,
             "groq/openai/gpt-oss-120b",
-            "groq/openai/gpt-oss-20b",
-            "groq/qwen/qwen3.8-27b",
-            "groq/qwen/qwen3.6-27b",
-            "gemini/gemini-2.5-flash"
+            "groq/openai/gpt-oss-20b"
         ]
         # Remove duplicates while preserving order
         candidate_models = list(dict.fromkeys(candidate_models))
@@ -108,53 +108,49 @@ class LLMClient:
             if response_format:
                 params["response_format"] = response_format
 
-            try:
-                response = await litellm.acompletion(**params)
-                latency_ms = (time.perf_counter() - start_time) * 1000
+            max_retries = 3
+            base_delay = 2.0
+            
+            for attempt in range(max_retries):
+                try:
+                    response = await litellm.acompletion(**params)
+                    latency_ms = (time.perf_counter() - start_time) * 1000
 
-                content = response.choices[0].message.content or ""
-                tool_calls = None
-                if hasattr(response.choices[0].message, "tool_calls") and response.choices[0].message.tool_calls:
-                    tool_calls = [tc.model_dump() if hasattr(tc, "model_dump") else dict(tc) for tc in response.choices[0].message.tool_calls]
+                    content = response.choices[0].message.content or ""
+                    tool_calls = None
+                    if hasattr(response.choices[0].message, "tool_calls") and response.choices[0].message.tool_calls:
+                        tool_calls = [tc.model_dump() if hasattr(tc, "model_dump") else dict(tc) for tc in response.choices[0].message.tool_calls]
 
-                usage = getattr(response, "usage", None)
-                prompt_tokens = usage.prompt_tokens if usage else 0
-                completion_tokens = usage.completion_tokens if usage else 0
-                total_tokens = usage.total_tokens if usage else prompt_tokens + completion_tokens
+                    usage = getattr(response, "usage", None)
+                    prompt_tokens = usage.prompt_tokens if usage else 0
+                    completion_tokens = usage.completion_tokens if usage else 0
+                    total_tokens = usage.total_tokens if usage else prompt_tokens + completion_tokens
 
-                # Calculate accurate cost based on Groq Cloud pricing
-                rates = GROQ_MODEL_PRICING.get(current_model, {"input": 0.00000015, "output": 0.00000060})
-                cost_usd = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
+                    # Calculate accurate cost based on Groq Cloud pricing
+                    rates = GROQ_MODEL_PRICING.get(current_model, {"input": 0.00000015, "output": 0.00000060})
+                    cost_usd = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
 
-                return LLMResponse(
-                    content=content,
-                    tool_calls=tool_calls,
-                    model=current_model,
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens,
-                    total_tokens=total_tokens,
-                    cost_usd=cost_usd,
-                    latency_ms=latency_ms,
-                    raw_response=response
-                )
-            except Exception:
-                # Instantly try next model if rate-limited or unavailable
-                continue
+                    return LLMResponse(
+                        content=content,
+                        tool_calls=tool_calls,
+                        model=current_model,
+                        prompt_tokens=prompt_tokens,
+                        completion_tokens=completion_tokens,
+                        total_tokens=total_tokens,
+                        cost_usd=cost_usd,
+                        latency_ms=latency_ms,
+                        raw_response=response
+                    )
+                except RateLimitError as e:
+                    print(f"RateLimitError on model {current_model}: {e}. Retrying...")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(base_delay * (2 ** attempt))
+                    else:
+                        print(f"Model {current_model} exhausted rate limit retries.")
+                        break  # Move to next model
+                except Exception as e:
+                    print(f"Model {current_model} failed with error: {e}")
+                    # Instantly try next model if unavailable or other error
+                    break
 
-        # Fallback evaluation if cloud providers fail
-        latency_ms = (time.perf_counter() - start_time) * 1000
-        input_text = " ".join(m.get("content", "") for m in messages)
-        est_prompt_tokens = max(120, len(input_text) // 4)
-        est_completion_tokens = 70
-        rates = GROQ_MODEL_PRICING.get(requested_model, {"input": 0.000000075, "output": 0.00000030})
-        cost_usd = (est_prompt_tokens * rates["input"]) + (est_completion_tokens * rates["output"])
-
-        return LLMResponse(
-            content="CalibratedScore: 85\nRecommendation: HIRE\nSummary: Evaluation completed with AST and load simulation telemetry.",
-            model=requested_model,
-            prompt_tokens=est_prompt_tokens,
-            completion_tokens=est_completion_tokens,
-            total_tokens=est_prompt_tokens + est_completion_tokens,
-            cost_usd=cost_usd,
-            latency_ms=latency_ms
-        )
+        raise Exception("All configured LLM providers failed to return a response.")

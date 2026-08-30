@@ -41,7 +41,6 @@ show_menu() {
     echo -e "  ${GREEN}2)${NC} 🤖 Run Advanced Solution on Single Repository (FSM Multi-Agent)"
     echo -e "  ${GREEN}3)${NC} 📊 Run Complete Benchmark (Baseline vs Advanced on 15 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Web Git Repository (e.g. GitHub URL)"
-    echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Traces (Rich Terminal Viewer)"
     echo -e "  ${GREEN}6)${NC} 🧪 Run Pytest Test Suite"
     echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (http://127.0.0.1:8000)"
     echo -e "  ${GREEN}8)${NC} 🧹 Clean temporary files and traces"
@@ -112,12 +111,6 @@ while true; do
             read -p "Enter branch or commit hash [default: HEAD]: " commit_hash
             commit_hash=${commit_hash:-HEAD}
             python3 -m src.cli.review_repo --repo "$repo_url" --commit "$commit_hash" --runner both
-            echo ""
-            read -p "Press [Enter] to continue..."
-            ;;
-        5)
-            echo -e "${CYAN}Launching Trace Viewer...${NC}"
-            python3 -m src.tracing.viewer
             echo ""
             read -p "Press [Enter] to continue..."
             ;;

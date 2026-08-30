@@ -36,6 +36,14 @@ A) Analyze whether the candidate's diff addresses or worsens the known architect
 B) Propose a CALIBRATED SCORE (0-100) based on ALL evidence. You may adjust the formula score up or down.
 C) Write a 2-3 sentence executive summary citing exact technical trade-offs.
 
+OVERRIDE AUTHORITY — BREAK THE GLASS:
+If you independently identify a CRITICAL architectural flaw (race condition, deadlock, SQL injection, memory leak,
+event loop collapse, data corruption) that the Formula Preliminary Score fails to penalize adequately (i.e., the
+formula scores > 70 but your analysis finds a severe defect), you MUST:
+- Set your CalibratedScore dramatically lower (0-40 range).
+- Add an OverrideReason field explaining exactly what the static tools missed and why your analysis supersedes their report.
+Your CalibratedScore will become the final score, bypassing the formula entirely.
+
 SCORING GUIDELINES:
 - 0-30: Critical flaws — deadlocks, SQL injection, event loop collapse, data corruption
 - 31-50: Major architectural flaws — state drift, memory exhaustion, race conditions, SLA violations
@@ -47,6 +55,7 @@ REQUIRED OUTPUT FORMAT (strict):
 CalibratedScore: <integer 0-100>
 Recommendation: <STRONG_HIRE | HIRE | LEAN_NO | REJECT>
 Summary: <2-3 sentence technical justification>
+OverrideReason: <OPTIONAL — include ONLY when you are invoking Override Authority to bypass the formula score. Explain what the static tools missed.>
 """
 
 
@@ -136,24 +145,112 @@ class SeniorEngineeringCriticAgent:
             "severity": severity
         }
 
-    async def generate_dossier(
+
+
+
+    def build_initial_messages(
         self,
         submission: CandidateSubmission,
         spec: ScenarioSpec,
         alignment_data: dict[str, Any],
         verification_report: VerificationReport
-    ) -> SeniorVettingDossier:
-        """Produces the final holistic vetting dossier with formula + LLM calibration."""
+    ) -> list[dict[str, Any]]:
+        from src.agents.critic_agent import get_critic_system_prompt
         
-        # Step 1: Compute formula-based scores
         formula = self._compute_formula_score(alignment_data, verification_report, spec)
+        load = verification_report.load_metrics
         
+        ast_summary = "\n".join([f"- {path}: {desc}" for path, desc in spec.existing_codebase_map.items()]) if spec.existing_codebase_map else "No AST map available."
+        if len(ast_summary) > 4000:
+            ast_summary = ast_summary[:4000] + "\n...[AST TRUNCATED]"
+        
+        flaws = []
+        if not load.sla_met or load.distributed_deadlock_detected or load.error_rate_pct > 0.0:
+            flaws.append(load.details)
+        if not verification_report.static_analysis_clean:
+            for vuln in verification_report.security_vulnerabilities_found:
+                flaws.append(vuln)
+        api_contract_preserved = alignment_data.get("context_alignment", {}).get("api_contract_preserved", True)
+        if not api_contract_preserved:
+            flaws.append("Breaking contract change: Deleted response field in public API without deprecation cycle.")
+        for finding in alignment_data.get("findings", []):
+            flaws.append(finding)
+            
+        user_msg = (
+            f"=== SCENARIO ===\n"
+            f"Title: {spec.title} ({spec.github_repo})\n"
+            f"Architecture: {spec.architecture_type.value}\n"
+            f"Known Architectural Flaw: {spec.ground_truth_flaw}\n"
+            f"Expected Optimal Fix: {spec.expected_optimal_solution}\n\n"
+            f"=== CODEBASE AST MAP ===\n{ast_summary}\n\n"
+            f"=== CANDIDATE DIFF ===\n{submission.full_diff}\n\n"
+            f"=== TOOL EVIDENCE ===\n"
+            f"Load Simulation: severity={formula['severity']:.2f}, "
+            f"p95={load.p95_latency_ms}ms (SLA={spec.requirements.latency_p95_sla_ms}ms), "
+            f"error_rate={load.error_rate_pct}%, "
+            f"memory_peak={load.memory_peak_mb}MB (max={spec.requirements.max_memory_mb}MB), "
+            f"deadlock={load.distributed_deadlock_detected}\n"
+            f"Codebase Alignment: {json.dumps(alignment_data.get('findings', []))}\n"
+            f"Security Issues: {json.dumps(verification_report.security_vulnerabilities_found)}\n\n"
+            f"=== FORMULA PRELIMINARY SCORE ===\n"
+            f"Architecture: {formula['arch_score']}/100, Scalability: {formula['scalability_score']}/100, "
+            f"Code Quality: {formula['code_quality_score']}/100 → Overall: {formula['overall']}/100\n"
+            f"Detected Flaws: {json.dumps(flaws)}\n\n"
+            f"Based on ALL evidence above, provide your CalibratedScore, Recommendation, and Summary."
+            f"You can use the 'read_module_code' tool to fetch the relevant code blocks from the repository if you need to inspect the inner function bodies before rendering a final verdict."
+        )
+        sys_prompt = get_critic_system_prompt(spec.difficulty)
+        return [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_msg}
+        ]
+
+    async def step_evaluation(self, messages: list[dict[str, Any]], spec: ScenarioSpec):
+        tools = [{
+            "type": "function",
+            "function": {
+                "name": "read_module_code",
+                "description": "Read the full source code of a specific module to inspect its implementation details.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "module_name": {
+                            "type": "string",
+                            "description": "The file path or module name to read (e.g., 'src/core/lock.py')"
+                        }
+                    },
+                    "required": ["module_name"]
+                }
+            }
+        }]
+        
+        res = await self.llm_client.acomplete(
+            messages=messages,
+            model=self.model,
+            temperature=0.2,
+            tools=tools
+        )
+        
+        self.last_tokens += res.total_tokens
+        self.last_cost_usd += res.cost_usd
+        self.last_latency_ms += res.latency_ms
+        
+        return res
+
+    def parse_dossier(
+        self,
+        llm_res,
+        submission: CandidateSubmission,
+        spec: ScenarioSpec,
+        alignment_data: dict[str, Any],
+        verification_report: VerificationReport
+    ) -> SeniorVettingDossier:
+        formula = self._compute_formula_score(alignment_data, verification_report, spec)
         load = verification_report.load_metrics
         api_contract_preserved = alignment_data.get("context_alignment", {}).get("api_contract_preserved", True)
-
-        # Step 2: Collect evidence citations and flaws
-        citations: list[EvidenceCitation] = []
-        flaws: list[str] = []
+        
+        citations = []
+        flaws = []
 
         if not load.sla_met or load.distributed_deadlock_detected or load.error_rate_pct > 0.0:
             flaws.append(load.details)
@@ -199,53 +296,14 @@ class SeniorEngineeringCriticAgent:
                     explanation=finding
                 )
             )
-
-        # Step 3: LLM Calibration — ask the model to propose a calibrated score
-        user_msg = (
-            f"=== SCENARIO ===\n"
-            f"Title: {spec.title} ({spec.github_repo})\n"
-            f"Architecture: {spec.architecture_type.value}\n"
-            f"Known Architectural Flaw: {spec.ground_truth_flaw}\n"
-            f"Expected Optimal Fix: {spec.expected_optimal_solution}\n\n"
-            f"=== CANDIDATE DIFF ===\n{submission.full_diff}\n\n"
-            f"=== TOOL EVIDENCE ===\n"
-            f"Load Simulation: severity={formula['severity']:.2f}, "
-            f"p95={load.p95_latency_ms}ms (SLA={spec.requirements.latency_p95_sla_ms}ms), "
-            f"error_rate={load.error_rate_pct}%, "
-            f"memory_peak={load.memory_peak_mb}MB (max={spec.requirements.max_memory_mb}MB), "
-            f"deadlock={load.distributed_deadlock_detected}\n"
-            f"Codebase Alignment: {json.dumps(alignment_data.get('findings', []))}\n"
-            f"Security Issues: {json.dumps(verification_report.security_vulnerabilities_found)}\n\n"
-            f"=== FORMULA PRELIMINARY SCORE ===\n"
-            f"Architecture: {formula['arch_score']}/100, Scalability: {formula['scalability_score']}/100, "
-            f"Code Quality: {formula['code_quality_score']}/100 → Overall: {formula['overall']}/100\n"
-            f"Detected Flaws: {json.dumps(flaws)}\n\n"
-            f"Based on ALL evidence above, provide your CalibratedScore, Recommendation, and Summary."
-        )
-
-        sys_prompt = get_critic_system_prompt(spec.difficulty)
-        llm_res = await self.llm_client.acomplete(
-            messages=[
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_msg}
-            ],
-            model=self.model,
-            temperature=0.2
-        )
-
-        # Track LLM telemetry metrics
-        self.last_tokens = llm_res.total_tokens
-        self.last_cost_usd = llm_res.cost_usd
-        self.last_latency_ms = llm_res.latency_ms
-
-        # Step 4: Parse LLM response and blend scores
-        llm_score = formula["overall"]  # Fallback
+            
+        llm_score = formula["overall"]
         llm_recommendation = None
         executive_summary = ""
+        override_reason = ""
 
         if llm_res.content:
             content = llm_res.content.strip()
-            
             score_match = re.search(r"CalibratedScore:\s*(\d+(?:\.\d+)?)", content)
             if score_match:
                 llm_score = float(score_match.group(1))
@@ -255,7 +313,7 @@ class SeniorEngineeringCriticAgent:
                 if score_match:
                     llm_score = float(score_match.group(1))
                     llm_score = max(0.0, min(100.0, llm_score))
-            
+
             if "STRONG_HIRE" in content:
                 llm_recommendation = RecommendationType.STRONG_HIRE
             elif "LEAN_NO" in content:
@@ -264,16 +322,43 @@ class SeniorEngineeringCriticAgent:
                 llm_recommendation = RecommendationType.REJECT
             elif "HIRE" in content:
                 llm_recommendation = RecommendationType.HIRE
-            
-            summary_match = re.search(r"Summary:\s*(.+)", content, re.DOTALL)
+
+            # Parse executive summary (stop before OverrideReason if present)
+            summary_match = re.search(r"Summary:\s*(.+?)(?=\nOverrideReason:|$)", content, re.DOTALL)
             if summary_match:
                 executive_summary = summary_match.group(1).strip()
             else:
                 executive_summary = content
 
-        # Step 5: Blend formula and LLM scores (60% formula, 40% LLM)
-        blended_score = round((formula["overall"] * 0.6) + (llm_score * 0.4), 1)
+            # Parse Override Authority declaration
+            override_match = re.search(r"OverrideReason:\s*(.+)", content, re.DOTALL)
+            if override_match:
+                override_reason = override_match.group(1).strip()
+
+        # ── OVERRIDE AUTHORITY: Break the Glass ─────────────────────────────
+        # If the LLM explicitly filed an OverrideReason OR its calibrated score
+        # diverges ≥20 points downward from the formula's optimistic score,
+        # we discard the formula entirely and trust the LLM's semantic judgment.
+        formula_score = formula["overall"]
+        score_gap = formula_score - llm_score  # positive = LLM is harsher
+        override_triggered = bool(override_reason) or (score_gap >= 20.0 and llm_score < 70.0)
+
+        if override_triggered:
+            blended_score = float(llm_score)
+            if not override_reason:
+                override_reason = (
+                    f"LLM CalibratedScore ({llm_score:.1f}) diverged ≥20 points below the formula "
+                    f"score ({formula_score:.1f}), indicating the static tools missed a critical flaw. "
+                    f"Override Authority engaged: formula discarded, LLM judgment is final."
+                )
+        elif spec.scenario_id.startswith("takehome") or spec.scenario_id.startswith("custom"):
+            # For Take-Home / custom repos, always trust LLM (tools are blind to novel code)
+            blended_score = float(llm_score)
+        else:
+            blended_score = round((formula_score * 0.6) + (llm_score * 0.4), 1)
+
         blended_score = max(0.0, min(100.0, blended_score))
+        # ────────────────────────────────────────────────────────────────────
 
         if llm_recommendation:
             recommendation = llm_recommendation
@@ -295,12 +380,15 @@ class SeniorEngineeringCriticAgent:
                 f"Recommendation: {recommendation.value}."
             )
 
+        override_label = " [OVERRIDE AUTHORITY ENGAGED]" if override_triggered else ""
         trade_off_analysis = (
-            f"Formula score: {formula['overall']:.1f}, LLM calibrated score: {llm_score:.1f}, "
-            f"blended (60/40): {blended_score:.1f}. "
+            f"Formula score: {formula_score:.1f}, LLM calibrated score: {llm_score:.1f}, "
+            f"final score: {blended_score:.1f}{override_label}. "
             f"Severity multiplier from load simulation: {formula['severity']:.2f}. "
             f"{'Met all target SLAs and distributed contracts.' if (load.sla_met and api_contract_preserved) else f'Failed distributed contracts/SLAs: {load.details}'}"
         )
+        if override_triggered:
+            trade_off_analysis += f" Override reason: {override_reason}"
 
         return SeniorVettingDossier(
             candidate_id=submission.candidate_id,
@@ -314,5 +402,12 @@ class SeniorEngineeringCriticAgent:
             trade_off_analysis=trade_off_analysis,
             evidence_citations=citations,
             primary_flaws_flagged=flaws,
-            human_in_the_loop_approval_needed=(45.0 <= blended_score < 65.0)
+            human_in_the_loop_approval_needed=(45.0 <= blended_score < 65.0),
+            override_authority_triggered=override_triggered,
+            override_justification=override_reason,
         )
+
+
+
+
+

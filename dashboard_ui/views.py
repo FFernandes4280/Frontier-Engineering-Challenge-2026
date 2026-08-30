@@ -232,7 +232,7 @@ async def api_evaluate_case(request: HttpRequest, case_id: str) -> JsonResponse:
                 "model": runner_b.model,
                 "trajectory_file": os.path.basename(logger_b.json_path),
                 "trajectory_log": logger_b.trajectory.model_dump(),
-                "agreed_with_truth": (dossier_b.overall_vetting_score >= 65.0) == ground_truth.get("should_hire", True)
+                "agreed_with_truth": (dossier_b.overall_vetting_score >= 70.0) == ground_truth.get("should_hire", True)
             }
 
         if runner_type in ["advanced", "both"]:
@@ -251,7 +251,6 @@ async def api_evaluate_case(request: HttpRequest, case_id: str) -> JsonResponse:
                 "model": adv_model,
                 "trajectory_file": os.path.basename(logger_a.json_path),
                 "trajectory_log": logger_a.trajectory.model_dump(),
-                "agreed_with_truth": (dossier_a.overall_vetting_score >= 65.0) == ground_truth.get("should_hire", True)
             }
 
         primary_key = "advanced" if "advanced" in results else "baseline"

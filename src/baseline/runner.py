@@ -3,6 +3,7 @@
 import os
 import re
 import uuid
+import tiktoken
 
 from rich.console import Console
 from rich.panel import Panel
@@ -91,6 +92,28 @@ class BaselineVettingRunner:
             f"Status: 10/10 Baseline Unit Tests Passed (Sequential Local Execution)."
         )
 
+        try:
+            encoding = tiktoken.encoding_for_model(self.model)
+        except Exception:
+            encoding = tiktoken.get_encoding("cl100k_base")
+        
+        system_tokens = len(encoding.encode(BASELINE_SYSTEM_PROMPT))
+        user_tokens = len(encoding.encode(user_content))
+        total_tokens = system_tokens + user_tokens
+
+        if total_tokens > 7000:
+            if self.verbose:
+                console.print(f"[bold yellow]⚠️ WARNING: Payload token count ({total_tokens}) exceeds 7000. Truncating diff...[/bold yellow]")
+            
+            # Re-encode user_content as a whole and truncate it directly to ensure we stay under the limit.
+            # We want total_tokens <= 7000 (giving a 1000 token buffer to prevent counting mismatches).
+            max_user_tokens = 7000 - system_tokens
+            user_tokens_encoded = encoding.encode(user_content)
+            
+            if len(user_tokens_encoded) > max_user_tokens:
+                truncated_user = user_tokens_encoded[:max_user_tokens - 50] + encoding.encode("\n\n[...TRUNCATED DUE TO TOKEN LIMITS...]")
+                user_content = encoding.decode(truncated_user)
+
         if self.verbose:
             console.print("\n[bold yellow]📍 STEP 1: PROMPT-ENGINEERED PAYLOAD CONSTRUCTED[/bold yellow]")
             console.print(Panel(f"[bold]System Prompt (With Chain-of-Thought & Senior Rubrics):[/bold]\n{BASELINE_SYSTEM_PROMPT.strip()}\n\n[bold]User Payload:[/bold]\n{user_content[:1500]}...\n[dim](diff truncated for display)[/dim]", border_style="yellow"))
@@ -128,8 +151,8 @@ class BaselineVettingRunner:
         )
 
         # Step 3: Parse response
-        score = 88.0
-        recommendation = RecommendationType.HIRE
+        score = 0.0
+        recommendation = RecommendationType.LEAN_NO
         
         score_match = re.search(r"Score:\s*(\d+(?:\.\d+)?)", res.content)
         if score_match:

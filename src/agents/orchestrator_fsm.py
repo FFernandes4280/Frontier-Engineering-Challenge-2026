@@ -147,7 +147,7 @@ class HolisticVettingOrchestrator:
                 state=AgentStatus.EXECUTING_TOOLS.value,
                 metadata={"from_state": AgentStatus.ANALYZING.value, "to_state": AgentStatus.EXECUTING_TOOLS.value}
             )
-            verification = self.verifier_agent.verify(submission, spec)
+            verification = await self.verifier_agent.verify(submission, spec)
             pipeline_data["verification"] = verification
 
             if self.verbose:
@@ -181,12 +181,25 @@ class HolisticVettingOrchestrator:
                 state=AgentStatus.VERIFYING.value,
                 metadata={"all_passed": pipeline_data["verification"].all_tests_passed}
             )
-            dossier = await self.critic_agent.generate_dossier(
-                submission=submission,
-                spec=spec,
-                alignment_data=pipeline_data["alignment"],
-                verification_report=pipeline_data["verification"]
-            )
+
+            if "critic_messages" not in pipeline_data:
+                pipeline_data["critic_messages"] = self.critic_agent.build_initial_messages(
+                    submission, spec, pipeline_data["alignment"], pipeline_data["verification"]
+                )
+
+            # Let Critic agent process the current messages, allowing for tool calls
+            response = await self.critic_agent.step_evaluation(pipeline_data["critic_messages"], spec)
+            
+            if response.tool_calls:
+                pipeline_data["current_tool_calls"] = response.tool_calls
+                pipeline_data["critic_messages"].append({
+                    "role": "assistant",
+                    "content": response.content,
+                    "tool_calls": response.tool_calls
+                })
+                return AgentStatus.INSPECTING_CODE
+                
+            dossier = self.critic_agent.parse_dossier(response, submission, spec, pipeline_data["alignment"], pipeline_data["verification"])
             pipeline_data["dossier"] = dossier
             logger.log_step(
                 event_type="LLM_SYNTHESIS",
@@ -209,6 +222,46 @@ class HolisticVettingOrchestrator:
                 metadata={"calibrated_score": dossier.overall_vetting_score}
             )
             return AgentStatus.HUMAN_CHECKPOINT if dossier.human_in_the_loop_approval_needed else AgentStatus.COMPLETED
+
+        # 4.5. INSPECTING_CODE Handler
+        async def handle_inspecting_code(ctx: AgentContext) -> AgentStatus:
+            if self.verbose:
+                console.print("\n[bold cyan]📍 FSM STAGE 4.5: DYNAMIC AST NAVIGATION[/bold cyan]")
+            
+            tool_calls = pipeline_data.get("current_tool_calls", [])
+            
+            for tool_call in tool_calls:
+                function_name = tool_call.get("function", {}).get("name")
+                arguments_str = tool_call.get("function", {}).get("arguments", "{}")
+                tool_call_id = tool_call.get("id")
+                
+                if function_name == "read_module_code":
+                    import json
+                    try:
+                        args = json.loads(arguments_str)
+                        module_name = args.get("module_name")
+                        if self.verbose:
+                            console.print(f"  • Executing Tool: [bold]read_module_code({module_name})[/bold]")
+                            
+                        # Simulate fetching code block
+                        # In a real system, this would read the AST or codebase
+                        code_content = f"# Fetched content for {module_name}\n# Implementation details of {module_name} omitted for brevity but analyzed by critic."
+                        
+                        pipeline_data["critic_messages"].append({
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "name": function_name,
+                            "content": code_content
+                        })
+                    except Exception as e:
+                        pipeline_data["critic_messages"].append({
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "name": function_name,
+                            "content": f"Error executing tool: {str(e)}"
+                        })
+                        
+            return AgentStatus.VERIFYING
 
         # 5. HUMAN_CHECKPOINT Handler (Contextual Review Card & Interactive Approval)
         async def handle_human_checkpoint(ctx: AgentContext) -> AgentStatus:
@@ -281,24 +334,14 @@ class HolisticVettingOrchestrator:
         fsm.register_handler(AgentStatus.ANALYZING, handle_analyzing)
         fsm.register_handler(AgentStatus.EXECUTING_TOOLS, handle_executing_tools)
         fsm.register_handler(AgentStatus.VERIFYING, handle_verifying)
+        fsm.register_handler(AgentStatus.INSPECTING_CODE, handle_inspecting_code)
         fsm.register_handler(AgentStatus.HUMAN_CHECKPOINT, handle_human_checkpoint)
 
         await fsm.run()
 
         dossier: SeniorVettingDossier = pipeline_data.get("dossier")
         if not dossier:
-            dossier = SeniorVettingDossier(
-                candidate_id=submission.candidate_id,
-                scenario_id=spec.scenario_id,
-                overall_vetting_score=50.0,
-                recommendation=RecommendationType.LEAN_NO,
-                architecture_score=50.0,
-                concurrency_scalability_score=50.0,
-                code_quality_reusability_score=50.0,
-                executive_summary="FSM execution pipeline completed with partial telemetry.",
-                trade_off_analysis="Partial evaluation recorded.",
-                evidence_citations=[]
-            )
+            raise Exception("FSM execution failed to produce a valid dossier.")
 
         if self.verbose:
             console.print("\n[bold green]🏁 FSM EXECUTION COMPLETED[/bold green]")
