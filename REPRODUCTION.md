@@ -44,9 +44,9 @@ Edit `.env` to include your provider of choice:
 ### Option A: Using Groq Cloud (Free & Ultra-Fast)
 ```ini
 GROQ_API_KEY=gsk_your_groq_api_key_here
-BASELINE_MODEL=groq/llama-3.3-70b-versatile
-ADVANCED_MODEL=groq/llama-3.1-8b-instant
-DEFAULT_MODEL=groq/llama-3.1-8b-instant
+BASELINE_MODEL=groq/openai/gpt-oss-120b
+ADVANCED_MODEL=groq/qwen/qwen3.8-27b
+DEFAULT_MODEL=groq/qwen/qwen3.8-27b
 ```
 
 ### Option B: Using Google Gemini

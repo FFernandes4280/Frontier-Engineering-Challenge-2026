@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>micro1 Frontier Engineering Challenge 2026 — Senior Software Vetting System</title>
+    <!-- Bootstrap 5 Dark CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --border-color: #334155;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-purple: #a855f7;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .navbar {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        .metric-card {
+            border-left: 4px solid var(--accent-blue);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        }
+        .nav-tabs .nav-link {
+            color: #94a3b8;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 12px 20px;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--accent-blue);
+            background-color: transparent;
+            border-bottom: 3px solid var(--accent-blue);
+        }
+        .badge-hire {
+            background-color: #065f46;
+            color: #34d399;
+            border: 1px solid #059669;
+        }
+        .badge-reject {
+            background-color: #881337;
+            color: #f43f5e;
+            border: 1px solid #be123c;
+        }
+        pre, code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            background-color: #090d16;
+            color: #e2e8f0;
+            border-radius: 8px;
+        }
+        .diff-add { color: #4ade80; background-color: rgba(74, 222, 128, 0.1); }
+        .diff-del { color: #f87171; background-color: rgba(248, 113, 113, 0.1); }
+        .scenario-card {
+            cursor: pointer;
+            transition: border-color 0.2s ease;
+        }
+        .scenario-card:hover {
+            border-color: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold text-white d-flex align-items-center gap-2" href="#">
+                <i class="fa-solid fa-microchip text-info"></i>
+                <span>micro1 <span class="badge bg-primary text-white rounded-pill px-2 py-1 fs-6">Frontier Challenge 2026</span></span>
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <a href="https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026" target="_blank" class="btn btn-outline-light btn-sm">
+                    <i class="fa-brands fa-github me-1"></i> View Repository
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4 py-4">
+        
+        <!-- Hero Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card p-4 bg-gradient" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <h2 class="fw-bold mb-1 text-white">Automated Senior Software Engineering Vetting System</h2>
+                            <p class="text-secondary mb-0">
+                                Evaluating SWE candidates across <strong>15 real open-source distributed systems scenarios</strong> using an Asymmetric Multi-Agent FSM Squad.
+                            </p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-dark border border-secondary px-3 py-2 text-info">
+                                <i class="fa-solid fa-robot me-1"></i> Baseline: 120B Model
+                            </span>
+                            <span class="badge bg-dark border border-secondary px-3 py-2 text-success">
+                                <i class="fa-solid fa-sitemap me-1"></i> Advanced: 20B FSM Squad
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card p-3 metric-card" style="border-left-color: #38bdf8;">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary small fw-semibold text-uppercase">Hiring Decision Accuracy</span>
+                        <i class="fa-solid fa-bullseye text-info fs-5"></i>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h2 class="fw-bold mb-0 text-white">93.3%</h2>
+                        <span class="text-success small fw-semibold"><i class="fa-solid fa-arrow-up"></i> 14/15 Cases</span>
+                    </div>
+                    <small class="text-muted mt-1">Ground Truth senior agreement</small>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card p-3 metric-card" style="border-left-color: #34d399;">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary small fw-semibold text-uppercase">Score Fidelity</span>
+                        <i class="fa-solid fa-chart-line text-success fs-5"></i>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h2 class="fw-bold mb-0 text-white">93.6 <span class="fs-6 text-muted">/ 100</span></h2>
+                        <span class="text-success small fw-semibold"><i class="fa-solid fa-arrow-up"></i> +7.8 vs BL</span>
+                    </div>
+                    <small class="text-muted mt-1">Avg Score Absolute Error: <strong>6.4 pts</strong></small>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card p-3 metric-card" style="border-left-color: #a855f7;">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary small fw-semibold text-uppercase">Cost Efficiency</span>
+                        <i class="fa-solid fa-coins text-warning fs-5"></i>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h2 class="fw-bold mb-0 text-white">$0.00015</h2>
+                        <span class="text-success small fw-semibold"><i class="fa-solid fa-arrow-down"></i> 51.5% Cheaper</span>
+                    </div>
+                    <small class="text-muted mt-1">Groq Cloud token economics</small>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card p-3 metric-card" style="border-left-color: #f59e0b;">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-secondary small fw-semibold text-uppercase">Vetting Duration</span>
+                        <i class="fa-solid fa-bolt text-warning fs-5"></i>
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mt-2">
+                        <h2 class="fw-bold mb-0 text-white">0.85s</h2>
+                        <span class="text-success small fw-semibold"><i class="fa-solid fa-arrow-down"></i> 37% Faster</span>
+                    </div>
+                    <small class="text-muted mt-1">Per candidate evaluation</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+                    <i class="fa-solid fa-table-columns me-1"></i> Comparative Benchmark
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="scenarios-tab" data-bs-toggle="tab" data-bs-target="#scenarios" type="button">
+                    <i class="fa-solid fa-list-check me-1"></i> 15 SWE Scenarios & AST
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="architecture-tab" data-bs-toggle="tab" data-bs-target="#architecture" type="button">
+                    <i class="fa-solid fa-diagram-project me-1"></i> Agent Squad & FSM Architecture
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tabs Content -->
+        <div class="tab-content" id="mainTabContent">
+            
+            <!-- Tab 1: Overview & Benchmark -->
+            <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="card p-4">
+                            <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-trophy text-warning me-2"></i>Official Head-to-Head Benchmark (15 Cases)</h5>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover align-middle mb-0">
+                                    <thead class="table-secondary text-secondary small text-uppercase">
+                                        <tr>
+                                            <th>Case</th>
+                                            <th>Repository</th>
+                                            <th class="text-center">Ground Truth</th>
+                                            <th class="text-center">Baseline (120B)</th>
+                                            <th class="text-center">Advanced (20B)</th>
+                                            <th class="text-center">Winner</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+    
+                                        <tr>
+                                            <td class="fw-bold text-info">case_01</td>
+                                            <td>
+                                                <div class="fw-semibold">Distributed In-Memory State Drift across Multi-Worker Pods</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>encode/starlette</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">45</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">26.0</div>
+                                                <small class="text-muted">Δ 19.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">46.0</div>
+                                                <small class="text-muted">Δ 1.0</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_02</td>
+                                            <td>
+                                                <div class="fw-semibold">In-Memory Batch Loading RAM Exhaustion vs DB Stream</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>sqlalchemy/sqlalchemy</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">50</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">32.0</div>
+                                                <small class="text-muted">Δ 18.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">47.0</div>
+                                                <small class="text-muted">Δ 3.0</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_03</td>
+                                            <td>
+                                                <div class="fw-semibold">Redundant Custom Validation vs Core Pydantic Schemas</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>pydantic/pydantic</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">68</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">85.0</div>
+                                                <small class="text-muted">Δ 17.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">74.9</div>
+                                                <small class="text-muted">Δ 6.9</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_04</td>
+                                            <td>
+                                                <div class="fw-semibold">Async Event Loop Blocking via Synchronous HTTP in Proxy</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>encode/httpx</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">35</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">20.0</div>
+                                                <small class="text-muted">Δ 15.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">33.4</div>
+                                                <small class="text-muted">Δ 1.6</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_05</td>
+                                            <td>
+                                                <div class="fw-semibold">Distributed Task Ack & Balance Mutation Race Condition</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>celery/celery</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">40</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">29.0</div>
+                                                <small class="text-muted">Δ 11.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">39.6</div>
+                                                <small class="text-muted">Δ 0.4</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_06</td>
+                                            <td>
+                                                <div class="fw-semibold">Thundering Herd Cache Invalidation on Node Failover</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>redis/redis-py</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">75</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">68.0</div>
+                                                <small class="text-muted">Δ 7.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">69.8</div>
+                                                <small class="text-muted">Δ 5.2</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_07</td>
+                                            <td>
+                                                <div class="fw-semibold">Atomic Distributed Token Bucket Rate Limiter with Lua</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>litestar-org/litestar</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">92</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">80.0</div>
+                                                <small class="text-muted">Δ 12.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">74.9</div>
+                                                <small class="text-muted">Δ 17.1</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-primary">BL (120B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_08</td>
+                                            <td>
+                                                <div class="fw-semibold">Raw SQL Concatenation & Parameter Injection</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>pallets/werkzeug</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">20</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">10.0</div>
+                                                <small class="text-muted">Δ 10.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">27.2</div>
+                                                <small class="text-muted">Δ 7.2</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_09</td>
+                                            <td>
+                                                <div class="fw-semibold">Public Response Schema Contract Breaking Drift</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>marshmallow-code/marshmallow</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">55</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">64.0</div>
+                                                <small class="text-muted">Δ 9.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">49.3</div>
+                                                <small class="text-muted">Δ 5.7</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_10</td>
+                                            <td>
+                                                <div class="fw-semibold">The Reverse Lock Order Distributed Deadlock (Challenging Case)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>encode/databases</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">30</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">55.0</div>
+                                                <small class="text-muted">Δ 25.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">25.2</div>
+                                                <small class="text-muted">Δ 4.8</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_11</td>
+                                            <td>
+                                                <div class="fw-semibold">Unpooled HTTP Session Recreation File Descriptor Leak (urllib3)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>urllib3/urllib3</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">35</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">50.0</div>
+                                                <small class="text-muted">Δ 15.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">37.9</div>
+                                                <small class="text-muted">Δ 2.9</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_12</td>
+                                            <td>
+                                                <div class="fw-semibold">Event Loop CPU Starvation via Cryptographic Hashing (FastAPI)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>tiangolo/fastapi</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">30</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">35.0</div>
+                                                <small class="text-muted">Δ 5.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">44.3</div>
+                                                <small class="text-muted">Δ 14.3</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-primary">BL (120B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_13</td>
+                                            <td>
+                                                <div class="fw-semibold">N+1 Database Query Cascade in Serializer Loop (Django)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>django/django</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">45</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">45.0</div>
+                                                <small class="text-muted">Δ 0.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">46.4</div>
+                                                <small class="text-muted">Δ 1.4</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-primary">BL (120B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_14</td>
+                                            <td>
+                                                <div class="fw-semibold">Graceful Shutdown with In-Flight Request Draining (Uvicorn / ASGI)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>encode/uvicorn</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">95</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">70.0</div>
+                                                <small class="text-muted">Δ 25.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">93.7</div>
+                                                <small class="text-muted">Δ 1.3</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                        <tr>
+                                            <td class="fw-bold text-info">case_15</td>
+                                            <td>
+                                                <div class="fw-semibold">Unbounded Outbound Microservice Call Cascading Failure (aiohttp)</div>
+                                                <small class="text-muted"><i class="fa-brands fa-github me-1"></i>aio-libs/aiohttp</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">40</span></td>
+                                            <td class="text-center">
+                                                <div class="fw-bold">65.0</div>
+                                                <small class="text-muted">Δ 25.0</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-bold text-success">62.9</div>
+                                                <small class="text-muted">Δ 22.9</small>
+                                            </td>
+                                            <td class="text-center"><span class="badge bg-success">ADV (20B)</span></td>
+                                        </tr>
+        
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card p-4 mb-4">
+                            <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-chart-pie text-info me-2"></i>Head-to-Head Win Rate</h5>
+                            <canvas id="winRateChart" style="max-height: 220px;"></canvas>
+                        </div>
+
+                        <div class="card p-4">
+                            <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-coins text-warning me-2"></i>Groq Cloud Cost & Speed</h5>
+                            <div class="p-3 mb-2 rounded bg-dark border border-secondary">
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Advanced Solution (20B):</span>
+                                    <strong class="text-success">$0.000155 / task</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span class="text-muted">Baseline Solution (120B):</span>
+                                    <strong class="text-light">$0.000320 / task</strong>
+                                </div>
+                                <div class="progress mt-2" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 48.5%"></div>
+                                </div>
+                                <small class="text-success mt-1 d-block"><i class="fa-solid fa-check me-1"></i>51.5% cost reduction</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: 15 Scenarios Grid -->
+            <div class="tab-pane fade" id="scenarios" role="tabpanel">
+                <div class="row g-4">
+    
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_01</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Distributed In-Memory State Drift across Multi-Worker Pods</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/encode/starlette/pull/1458" target="_blank" class="text-info text-decoration-none">encode/starlette</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Using @lru_cache in multi-worker ASGI processes causes localized state drift across server pods....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">45 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_02</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">In-Memory Batch Loading RAM Exhaustion vs DB Stream</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/sqlalchemy/sqlalchemy/pull/6842" target="_blank" class="text-info text-decoration-none">sqlalchemy/sqlalchemy</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Loading all ledger rows with .all() into memory exhausts 1GB RAM under 100k rows instead of cursor streaming....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">50 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_03</span>
+                                <span class="badge badge-hire px-2 py-1"><i class="fa-solid fa-check me-1"></i>HIRE</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Redundant Custom Validation vs Core Pydantic Schemas</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/pydantic/pydantic/pull/4912" target="_blank" class="text-info text-decoration-none">pydantic/pydantic</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Reinvented 100 lines of custom regex validation instead of reusing src/core/validators.py....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">68 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_04</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Async Event Loop Blocking via Synchronous HTTP in Proxy</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/encode/httpx/pull/2110" target="_blank" class="text-info text-decoration-none">encode/httpx</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Synchronous HTTP call inside async handler blocks the asyncio single-threaded event loop....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">35 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_05</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Distributed Task Ack &amp; Balance Mutation Race Condition</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/celery/celery/pull/7231" target="_blank" class="text-info text-decoration-none">celery/celery</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Balance mutation in distributed worker task without atomic lock or SELECT FOR UPDATE leads to double spending....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">40 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_06</span>
+                                <span class="badge badge-hire px-2 py-1"><i class="fa-solid fa-check me-1"></i>HIRE</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Thundering Herd Cache Invalidation on Node Failover</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/redis/redis-py/pull/2480" target="_blank" class="text-info text-decoration-none">redis/redis-py</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Hard TTL expiration without jitter generates database stampede under 50k concurrent requests....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">75 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_07</span>
+                                <span class="badge badge-hire px-2 py-1"><i class="fa-solid fa-check me-1"></i>HIRE</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Atomic Distributed Token Bucket Rate Limiter with Lua</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/litestar-org/litestar/pull/1890" target="_blank" class="text-info text-decoration-none">litestar-org/litestar</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> None - Candidate implemented an optimal atomic token bucket in Redis with zero race conditions....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">92 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_08</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Raw SQL Concatenation &amp; Parameter Injection</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/pallets/werkzeug/pull/2340" target="_blank" class="text-info text-decoration-none">pallets/werkzeug</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Direct string interpolation in SQL query introduces severe OWASP SQL injection vulnerability....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">20 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_09</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Public Response Schema Contract Breaking Drift</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/marshmallow-code/marshmallow/pull/1823" target="_blank" class="text-info text-decoration-none">marshmallow-code/marshmallow</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Direct deletion of response fields in public API breaks backwards compatibility for mobile clients....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">55 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_10</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">The Reverse Lock Order Distributed Deadlock (Challenging Case)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/encode/databases/pull/452" target="_blank" class="text-info text-decoration-none">encode/databases</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Two services acquire locks in reverse order (lock_a then lock_b vs lock_b then lock_a), causing catastrophic distributed...
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">30 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_11</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Unpooled HTTP Session Recreation File Descriptor Leak (urllib3)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/urllib3/urllib3/pull/2610" target="_blank" class="text-info text-decoration-none">urllib3/urllib3</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Instantiating new unpooled HTTP adapters/sessions inside request handler exhausts socket descriptors under 2000 RPS load...
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">35 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_12</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Event Loop CPU Starvation via Cryptographic Hashing (FastAPI)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/tiangolo/fastapi/pull/4820" target="_blank" class="text-info text-decoration-none">tiangolo/fastapi</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Executing synchronous pbkdf2 password hashing inside async def route stalls the single asyncio event loop for all concur...
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">30 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_13</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">N+1 Database Query Cascade in Serializer Loop (Django)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/django/django/pull/15420" target="_blank" class="text-info text-decoration-none">django/django</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Iterating over user records and accessing foreign relations without select_related triggers 1000 sequential DB queries p...
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">45 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_14</span>
+                                <span class="badge badge-hire px-2 py-1"><i class="fa-solid fa-check me-1"></i>HIRE</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Graceful Shutdown with In-Flight Request Draining (Uvicorn / ASGI)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/encode/uvicorn/pull/1890" target="_blank" class="text-info text-decoration-none">encode/uvicorn</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> None - Candidate implemented an optimal graceful shutdown coordinator with signal trapping and in-flight request drainin...
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">95 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">CASE_15</span>
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Unbounded Outbound Microservice Call Cascading Failure (aiohttp)</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i><a href="https://github.com/aio-libs/aiohttp/pull/6210" target="_blank" class="text-info text-decoration-none">aio-libs/aiohttp</a>
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 48px;">
+                                <strong class="text-warning">Flaw:</strong> Outbound microservice calls without a client timeout ceiling exhaust connection pools when upstream services degrade....
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">40 / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+        
+                </div>
+            </div>
+
+            <!-- Tab 3: Architecture & FSM -->
+            <div class="tab-pane fade" id="architecture" role="tabpanel">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="card p-4">
+                            <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-sitemap text-info me-2"></i>Deterministic FSM Pipeline</h5>
+                            <ol class="list-group list-group-numbered list-group-flush bg-transparent">
+                                <li class="list-group-item bg-transparent text-light border-secondary">
+                                    <strong>Provisioning & SLA Spec:</strong> Ingests repository AST map, concurrency target (RPS), and memory ceiling (MB).
+                                </li>
+                                <li class="list-group-item bg-transparent text-light border-secondary">
+                                    <strong>Dynamic Test Synthesis:</strong> Generates targeted load and concurrency tests for cache coherence, memory leaks, and deadlocks.
+                                </li>
+                                <li class="list-group-item bg-transparent text-light border-secondary">
+                                    <strong>Context Alignment & Blast Radius:</strong> AST symbol inspection, cyclomatic complexity delta, and API backwards compatibility.
+                                </li>
+                                <li class="list-group-item bg-transparent text-light border-secondary">
+                                    <strong>Runtime Load Simulation:</strong> Simulates high concurrent traffic, measures P95/P99 latency, socket descriptors, and deadlock detection.
+                                </li>
+                                <li class="list-group-item bg-transparent text-light border-secondary">
+                                    <strong>Senior Critic Synthesis & Human Gate:</strong> Continuous formula score blended with LLM calibration + Interactive Lead Review Gate.
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6">
+                        <div class="card p-4">
+                            <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-users-gear text-success me-2"></i>Specialized Multi-Agent Squad</h5>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-sm mb-0">
+                                    <thead>
+                                        <tr class="text-secondary small">
+                                            <th>Agent Name</th>
+                                            <th>Model / Tool</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>ScenarioProvisionerAgent</strong></td>
+                                            <td><span class="badge bg-secondary">AST Ingestion</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>DynamicTestSynthesizerAgent</strong></td>
+                                            <td><span class="badge bg-secondary">Synthetic Test Suite</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>CodeEvolutionAlignmentAgent</strong></td>
+                                            <td><span class="badge bg-secondary">BlastRadius & Context</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>CodeVerifierAgent</strong></td>
+                                            <td><span class="badge bg-secondary">LoadSimulator & OWASP</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>SeniorEngineeringCriticAgent</strong></td>
+                                            <td><span class="badge bg-success">groq/openai/gpt-oss-20b</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-5 pt-4 border-top border-secondary text-center text-muted small">
+            <p class="mb-1">micro1 Frontier Engineering Challenge 2026 &bull; Official Submission</p>
+            <p class="mb-0">Built with Python, Django, Deterministic FSM Multi-Agent Squad & Groq Cloud.</p>
+        </footer>
+
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Win Rate Chart -->
+    <script>
+        const ctx = document.getElementById('winRateChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Advanced (20B) Wins: 12', 'Baseline (120B) Wins: 3'],
+                datasets: [{
+                    data: [12, 3],
+                    backgroundColor: ['#34d399', '#38bdf8'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 12 } } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

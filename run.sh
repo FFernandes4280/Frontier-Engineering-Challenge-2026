@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Frontier Engineering Challenge 2026 - Interactive CLI Runner
+# Frontier Engineering Challenge 2026 - Interactive CLI & Web Runner
 # ==============================================================================
 
 set -e
@@ -41,9 +41,10 @@ show_menu() {
     echo -e "  ${GREEN}2)${NC} 🤖 Run Advanced Solution on Single Repository (FSM Multi-Agent)"
     echo -e "  ${GREEN}3)${NC} 📊 Run Complete Benchmark (Baseline vs Advanced on 10 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Web Git Repository (e.g. GitHub URL)"
-    echo -e "  ${GREEN}5)${NC} 🔍 Inspect Trajectories & Traces (Rich Terminal Viewer)"
+    echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Traces (Rich Terminal Viewer)"
     echo -e "  ${GREEN}6)${NC} 🧪 Run Pytest Test Suite"
-    echo -e "  ${GREEN}7)${NC} 🧹 Clean temporary files and traces"
+    echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (http://127.0.0.1:8000)"
+    echo -e "  ${GREEN}8)${NC} 🧹 Clean temporary files and traces"
     echo -e "  ${RED}0)${NC} 🚪 Exit"
     echo ""
 }
@@ -68,7 +69,7 @@ check_env
 while true; do
     show_header
     show_menu
-    read -p "Enter choice [0-7]: " choice
+    read -p "Enter choice [0-8]: " choice
     echo ""
 
     case $choice in
@@ -102,7 +103,7 @@ while true; do
             ;;
         4)
             echo -e "${CYAN}🌐 Review Custom Web Git Repository...${NC}"
-            read -p "Enter Git Repository URL (e.g. https://github.com/FFernandes4280/json-formatter): " repo_url
+            read -p "Enter Git Repository URL (e.g. https://github.com/FFernandes4280/development-tools): " repo_url
             read -p "Enter branch or commit hash [default: HEAD]: " commit_hash
             commit_hash=${commit_hash:-HEAD}
             python3 -m src.cli.review_repo --repo "$repo_url" --commit "$commit_hash" --runner both
@@ -122,6 +123,11 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         7)
+            echo -e "${CYAN}🚀 Starting Django Web Dashboard on http://127.0.0.1:8000...${NC}"
+            echo -e "${YELLOW}Press [Ctrl+C] to stop the web server when done.${NC}\n"
+            python3 manage.py runserver 127.0.0.1:8000
+            ;;
+        8)
             echo -e "${YELLOW}Cleaning cache files and temporary traces...${NC}"
             find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
             rm -rf .pytest_cache

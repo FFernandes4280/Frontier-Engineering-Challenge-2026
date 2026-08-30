@@ -435,5 +435,226 @@
       "ground_truth_score": 30.0,
       "primary_flaw": "Inverted lock acquisition order creates distributed deadlock under concurrent opposing transfers."
     }
+  },
+  {
+    "case_id": "case_11",
+    "title": "Unpooled HTTP Session Recreation File Descriptor Leak (urllib3)",
+    "difficulty": "Senior",
+    "github_repo": "urllib3/urllib3",
+    "pr_url": "https://github.com/urllib3/urllib3/pull/2610",
+    "historical_version": "v1.26.15 -> v1.26.16",
+    "ground_truth_flaw": "Instantiating new unpooled HTTP adapters/sessions inside request handler exhausts socket descriptors under 2000 RPS load.",
+    "expected_optimal_solution": "Reuse shared pool manager / singleton session.",
+    "spec": {
+      "scenario_id": "case_11",
+      "title": "HTTP Outbound Connection Pooling (urllib3)",
+      "github_repo": "urllib3/urllib3",
+      "pr_url": "https://github.com/urllib3/urllib3/pull/2610",
+      "historical_version": "v1.26.15 -> v1.26.16",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Proxy outbound requests to billing gateways under 2000 RPS concurrent load without leaking socket descriptors.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0,
+        "concurrency_target_rps": 2000,
+        "max_memory_mb": 256.0
+      },
+      "existing_codebase_map": {
+        "src/core/http_pool.py": "Thread-safe HTTPConnectionPool manager."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_11",
+      "scenario_id": "case_11",
+      "full_diff": "--- a/urllib3/client.py\n+++ b/urllib3/client.py\n@@ -12,4 +12,7 @@\n+def send_gateway_request(url: str, payload: dict):\n+    # Create new session per request\n+    session = requests.Session()\n+    adapter = HTTPAdapter(max_retries=3)\n+    session.mount('https://', adapter)\n+    return session.post(url, json=payload)",
+      "file_changes": [
+        {
+          "path": "urllib3/client.py",
+          "added_lines": 6,
+          "deleted_lines": 0,
+          "diff_content": "+def send_gateway_request(url: str, payload: dict):\n+    session = requests.Session()\n+    adapter = HTTPAdapter(max_retries=3)\n+    session.mount('https://', adapter)\n+    return session.post(url, json=payload)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 35.0,
+      "primary_flaw": "Instantiating unpooled sessions inside handler leaks sockets and exhausts file descriptors."
+    }
+  },
+  {
+    "case_id": "case_12",
+    "title": "Event Loop CPU Starvation via Cryptographic Hashing (FastAPI)",
+    "difficulty": "Senior",
+    "github_repo": "tiangolo/fastapi",
+    "pr_url": "https://github.com/tiangolo/fastapi/pull/4820",
+    "historical_version": "v0.95.0 -> v0.95.1",
+    "ground_truth_flaw": "Executing synchronous pbkdf2 password hashing inside async def route stalls the single asyncio event loop for all concurrent requests.",
+    "expected_optimal_solution": "Offload CPU-bound hashing to worker threadpool via run_in_threadpool.",
+    "spec": {
+      "scenario_id": "case_12",
+      "title": "High-Throughput Auth Verification (FastAPI)",
+      "github_repo": "tiangolo/fastapi",
+      "pr_url": "https://github.com/tiangolo/fastapi/pull/4820",
+      "historical_version": "v0.95.0 -> v0.95.1",
+      "architecture_type": "MICROSERVICES",
+      "description": "Authenticate user tokens and passwords under 3000 RPS without starving other async endpoints.",
+      "requirements": {
+        "latency_p95_sla_ms": 40.0,
+        "concurrency_target_rps": 3000
+      },
+      "existing_codebase_map": {
+        "src/core/security.py": "Async password hashing and threadpool dispatch utilities."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_12",
+      "scenario_id": "case_12",
+      "full_diff": "--- a/fastapi/security.py\n+++ b/fastapi/security.py\n@@ -20,5 +20,8 @@\n+async def verify_password(plain_password: str, hashed: str) -> bool:\n+    # Compute 100,000 iterations of synchronous PBKDF2 directly in async loop\n+    derived = hashlib.pbkdf2_hmac('sha256', plain_password.encode(), b'salt', 100000)\n+    return derived.hex() == hashed",
+      "file_changes": [
+        {
+          "path": "fastapi/security.py",
+          "added_lines": 5,
+          "deleted_lines": 0,
+          "diff_content": "+async def verify_password(plain_password: str, hashed: str) -> bool:\n+    derived = hashlib.pbkdf2_hmac('sha256', plain_password.encode(), b'salt', 100000)\n+    return derived.hex() == hashed"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 30.0,
+      "primary_flaw": "Heavy synchronous CPU hashing in async def blocks event loop for all concurrent users."
+    }
+  },
+  {
+    "case_id": "case_13",
+    "title": "N+1 Database Query Cascade in Serializer Loop (Django)",
+    "difficulty": "Senior",
+    "github_repo": "django/django",
+    "pr_url": "https://github.com/django/django/pull/15420",
+    "historical_version": "v4.2.0 -> v4.2.1",
+    "ground_truth_flaw": "Iterating over user records and accessing foreign relations without select_related triggers 1000 sequential DB queries per request.",
+    "expected_optimal_solution": "Apply select_related(\"profile\") on the base queryset.",
+    "spec": {
+      "scenario_id": "case_13",
+      "title": "Account Feed Serialization (Django)",
+      "github_repo": "django/django",
+      "pr_url": "https://github.com/django/django/pull/15420",
+      "historical_version": "v4.2.0 -> v4.2.1",
+      "architecture_type": "MODULAR_MONOLITH",
+      "description": "Render customer transaction list with author profile metadata under strict 50ms latency.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0,
+        "concurrency_target_rps": 1000
+      },
+      "existing_codebase_map": {
+        "src/accounts/queries.py": "Optimized querysets with prefetch and select_related."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_13",
+      "scenario_id": "case_13",
+      "full_diff": "--- a/django/contrib/auth/serializers.py\n+++ b/django/contrib/auth/serializers.py\n@@ -15,4 +15,7 @@\n+def serialize_users(users):\n+    # Iterates over queryset and queries profile table individually per row\n+    return [{'id': u.id, 'profile': u.profile.bio, 'avatar': u.profile.avatar_url} for u in users]",
+      "file_changes": [
+        {
+          "path": "django/contrib/auth/serializers.py",
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "diff_content": "+def serialize_users(users):\n+    return [{'id': u.id, 'profile': u.profile.bio, 'avatar': u.profile.avatar_url} for u in users]"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 45.0,
+      "primary_flaw": "N+1 query loop without select_related causes database connection pool saturation."
+    }
+  },
+  {
+    "case_id": "case_14",
+    "title": "Graceful Shutdown with In-Flight Request Draining (Uvicorn / ASGI)",
+    "difficulty": "Senior",
+    "github_repo": "encode/uvicorn",
+    "pr_url": "https://github.com/encode/uvicorn/pull/1890",
+    "historical_version": "v0.22.0 -> v0.23.0",
+    "ground_truth_flaw": "None - Candidate implemented an optimal graceful shutdown coordinator with signal trapping and in-flight request draining.",
+    "expected_optimal_solution": "Coordinate SIGTERM trap with asyncio.Event and 30s drain timeout before worker exit.",
+    "spec": {
+      "scenario_id": "case_14",
+      "title": "Zero-Downtime Deployment Signal Coordinator (Uvicorn)",
+      "github_repo": "encode/uvicorn",
+      "pr_url": "https://github.com/encode/uvicorn/pull/1890",
+      "historical_version": "v0.22.0 -> v0.23.0",
+      "architecture_type": "DISTRIBUTED_API",
+      "description": "Intercept Kubernetes SIGTERM signals to finish in-flight requests before container shutdown.",
+      "requirements": {
+        "latency_p95_sla_ms": 50.0,
+        "zero_downtime_required": true
+      },
+      "existing_codebase_map": {
+        "src/core/signals.py": "Signal handler registry and lifecycle hooks."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_14",
+      "scenario_id": "case_14",
+      "full_diff": "--- a/uvicorn/server.py\n+++ b/uvicorn/server.py\n@@ -50,6 +50,14 @@\n+class GracefulShutdownManager:\n+    def __init__(self, drain_timeout: float = 30.0):\n+        self.shutdown_event = asyncio.Event()\n+        self.drain_timeout = drain_timeout\n+\n+    async def handle_sigterm(self):\n+        logger.info('SIGTERM received: stopping listener, draining in-flight requests.')\n+        self.shutdown_event.set()\n+        await asyncio.wait_for(self.drain_active_connections(), timeout=self.drain_timeout)",
+      "file_changes": [
+        {
+          "path": "uvicorn/server.py",
+          "added_lines": 10,
+          "deleted_lines": 0,
+          "diff_content": "+class GracefulShutdownManager:\n+    def __init__(self, drain_timeout: float = 30.0):\n+        self.shutdown_event = asyncio.Event()\n+        self.drain_timeout = drain_timeout\n+    async def handle_sigterm(self):\n+        self.shutdown_event.set()\n+        await asyncio.wait_for(self.drain_active_connections(), timeout=self.drain_timeout)"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": true,
+      "ground_truth_score": 95.0,
+      "primary_flaw": "None - Outstanding senior implementation of zero-downtime draining."
+    }
+  },
+  {
+    "case_id": "case_15",
+    "title": "Unbounded Outbound Microservice Call Cascading Failure (aiohttp)",
+    "difficulty": "Senior",
+    "github_repo": "aio-libs/aiohttp",
+    "pr_url": "https://github.com/aio-libs/aiohttp/pull/6210",
+    "historical_version": "v3.8.4 -> v3.8.5",
+    "ground_truth_flaw": "Outbound microservice calls without a client timeout ceiling exhaust connection pools when upstream services degrade.",
+    "expected_optimal_solution": "Enforce strict ClientTimeout(total=5.0) and circuit breaker fallback.",
+    "spec": {
+      "scenario_id": "case_15",
+      "title": "Inter-Service Mesh Proxy Client (aiohttp)",
+      "github_repo": "aio-libs/aiohttp",
+      "pr_url": "https://github.com/aio-libs/aiohttp/pull/6210",
+      "historical_version": "v3.8.4 -> v3.8.5",
+      "architecture_type": "MICROSERVICES",
+      "description": "Orchestrate outbound calls to downstream microservices with cascading failure prevention.",
+      "requirements": {
+        "latency_p95_sla_ms": 80.0,
+        "concurrency_target_rps": 1500
+      },
+      "existing_codebase_map": {
+        "src/client/session.py": "Configured aiohttp client session with retry policies."
+      }
+    },
+    "submission": {
+      "candidate_id": "cand_15",
+      "scenario_id": "case_15",
+      "full_diff": "--- a/aiohttp/client_req.py\n+++ b/aiohttp/client_req.py\n@@ -25,4 +25,7 @@\n+async def fetch_user_wallet(user_id: str):\n+    # Calls external wallet service without timeout ceiling\n+    async with aiohttp.ClientSession() as session:\n+        async with session.get(f'http://wallet-svc/api/v1/wallets/{user_id}') as resp:\n+            return await resp.json()",
+      "file_changes": [
+        {
+          "path": "aiohttp/client_req.py",
+          "added_lines": 5,
+          "deleted_lines": 0,
+          "diff_content": "+async def fetch_user_wallet(user_id: str):\n+    async with aiohttp.ClientSession() as session:\n+        async with session.get(f'http://wallet-svc/api/v1/wallets/{user_id}') as resp:\n+            return await resp.json()"
+        }
+      ]
+    },
+    "human_senior_verdict": {
+      "should_hire": false,
+      "ground_truth_score": 40.0,
+      "primary_flaw": "Missing timeout on outbound HTTP call causes cascading connection exhaustion."
+    }
   }
 ]

@@ -56,7 +56,7 @@ def test_load_simulator_detects_deadlock(sample_scenario, flawed_submission):
 async def test_fsm_orchestrator_execution(sample_scenario, flawed_submission):
     mock_llm_response = LLMResponse(
         content="Candidate failed due to distributed deadlocks.",
-        model="gemini/gemini-1.5-flash",
+        model="groq/qwen/qwen3.8-27b",
         prompt_tokens=200,
         completion_tokens=50,
         total_tokens=250,
@@ -77,7 +77,7 @@ async def test_fsm_orchestrator_execution(sample_scenario, flawed_submission):
 async def test_baseline_runner_execution(sample_scenario, flawed_submission):
     mock_baseline_response = LLMResponse(
         content="Score: 88\nRecommendation: HIRE\nSummary: Clean code and tests passed.",
-        model="gemini/gemini-1.5-pro",
+        model="groq/openai/gpt-oss-120b",
         prompt_tokens=150,
         completion_tokens=40,
         total_tokens=190,

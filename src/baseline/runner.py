@@ -47,7 +47,7 @@ class BaselineVettingRunner:
     """Baseline solution evaluating code diffs using advanced prompt engineering without dynamic execution."""
 
     def __init__(self, model: str = None, trace_dir: str = "./traces", verbose: bool = False):
-        self.model = model or os.getenv("BASELINE_MODEL", "groq/llama-3.3-70b-versatile")
+        self.model = model or os.getenv("BASELINE_MODEL", "groq/openai/gpt-oss-120b")
         self.llm_client = LLMClient(default_model=self.model)
         self.trace_dir = trace_dir
         self.verbose = verbose

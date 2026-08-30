@@ -30,3 +30,7 @@ eval/benchmark_results.json
 .idea/
 .vscode/
 *.swp
+
+# SQLite database
+db.sqlite3
+

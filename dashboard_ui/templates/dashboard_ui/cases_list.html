@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Benchmark Scenarios Catalog — micro1 Challenge{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">📁 10 Benchmark Scenarios Catalog</h2>
+            <p class="text-muted mb-0">Every scenario is grounded in historical PR fixes from major open-source repositories.</p>
+        </div>
+        <a href="{% url 'custom_review' %}" class="btn btn-outline-info">
+            <i class="bi bi-plus-circle me-1"></i> Review Custom Web Repo
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% for c in cases %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100 shadow-sm border-secondary hover-shadow">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <span class="badge bg-primary">Case #{{ forloop.counter|stringformat:"02d" }}</span>
+                    <span class="badge bg-dark border border-secondary text-info">{{ c.spec.architecture_type }}</span>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-white mb-2">{{ c.title }}</h5>
+                    <p class="small text-muted mb-2">
+                        <i class="bi bi-github text-primary me-1"></i><code>{{ c.spec.github_repo }}</code>
+                        {% if c.spec.historical_version %}
+                        <span class="ms-1 badge bg-secondary">{{ c.spec.historical_version }}</span>
+                        {% endif %}
+                    </p>
+                    <p class="card-text text-secondary small mb-3" style="min-height: 48px;">
+                        {{ c.spec.description|truncatechars:120 }}
+                    </p>
+
+                    <div class="p-2 rounded mb-3" style="background-color: #0d1117; border: 1px solid #30363d;">
+                        <small class="text-muted d-block fw-semibold mb-1">Ground Truth Flaw:</small>
+                        <small class="text-warning d-block">{{ c.ground_truth_flaw|truncatechars:90 }}</small>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary">
+                        <span class="small text-muted">Senior Human Truth: <strong>{{ c.human_senior_verdict.ground_truth_score }}/100</strong></span>
+                        <a href="{% url 'case_detail' c.case_id %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-play-circle me-1"></i> Inspect & Run
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

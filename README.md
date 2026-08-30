@@ -115,7 +115,7 @@ stateDiagram-v2
 | **1. Scenario & Architecture Provisioner** | Packages scenario context, distributed topology, and non-functional requirements (P95 latency, max memory, consistency model). | Scenario Spec Catalog, SLA Definition Engine |
 | **2. Code Evolution & Context Alignment Agent** | Evaluates blast radius, cyclomatic complexity delta, API backwards compatibility, and detects whether candidate reused existing codebase modules. | `BlastRadiusAnalyzer`, `ContextInspector` (AST Pattern Matcher) |
 | **3. Static, Security & Load Performance Verifier** | Simulates concurrent traffic load (50+ users, 2000 RPS), detects distributed deadlocks, event loop blocking, memory spikes, and static OWASP vulnerabilities. | `LoadSimulator`, `SecurityScanner` |
-| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (Gemini 3.6 Flash / Llama 3.1 8B) |
+| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (`groq/qwen/qwen3.8-27b` / `gemini-3.6-flash`) |
 
 ---
 
@@ -166,7 +166,7 @@ For senior-level distributed engineering, prompts hit three fundamental barriers
 
 | Stage | What We Tried and Why | Evidence | Decision / Learning |
 | :--- | :--- | :---: | :--- |
-| **Baseline** | Single-prompt Monolithic Reviewer (`Gemini Pro` / `Llama 70B`) evaluating Git diff and test output. | 70.0% accuracy vs human ground truth (fooled by 3/10 flawed architectures). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
+| **Baseline** | Single-prompt Monolithic Reviewer (`groq/openai/gpt-oss-120b` / `Gemini Pro`) evaluating Git diff and test output. | 70.0% accuracy vs human ground truth (fooled by 3/10 flawed architectures). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
 | **Iteration 1** | *[Discarded Experiment]* Added eBPF typing speed and terminal navigation entropy tracker. | Generated high variance and unfair penalties due to natural interview nervousness without correlating with code quality. | **REMOVED:** Shifted telemetry strictly from "typing process" to **"Code Evolution & Context Alignment (Blast Radius & Module Reusability)"**. |
 | **Iteration 2** | Implemented AST Blast Radius and Codebase Reusability Inspector. | Accuracy jumped to 80.0%. Successfully flagged redundant reimplementation of tax validators. | **KEPT:** High-signal architectural compliance measurement. |
 | **Iteration 3** | Added Dynamic Load & Concurrency Simulator (evaluating race conditions, memory spikes, deadlocks, and event loop blocking). | Accuracy jumped to 90.0%. Caught distributed deadlocks and in-memory cache drift. | **KEPT:** Essential for distributed systems evaluation. |
@@ -182,7 +182,7 @@ For senior-level distributed engineering, prompts hit three fundamental barriers
 
 > [!TIP]
 > **The Hot Take for Agentic AI:**  
-> **"Agentic architecture with specialized inspection tools allows smaller, faster, cheaper models (Gemini 3.6 Flash / Llama 3.1 8B) to decisively outperform monolithic frontier models (Gemini Pro / Llama 70B) operating in single-shot mode."**  
+> **"Agentic architecture with specialized inspection tools allows smaller, faster, cheaper models (`groq/qwen/qwen3.8-27b` / `gemini-3.6-flash`) to decisively outperform monolithic frontier models (`groq/openai/gpt-oss-120b` / `gemini-pro-latest`) operating in single-shot mode."**  
 > Prompt engineering alone cannot substitute for dynamic execution environments, AST verification, and multi-agent debate.
 
 ---

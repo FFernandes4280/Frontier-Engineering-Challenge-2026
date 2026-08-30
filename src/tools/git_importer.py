@@ -1,6 +1,7 @@
-"""Git Repository Importer for Live Web Code Review."""
+"""Git Repository Importer for Live Web Code Review (Polyglot: Python, JS/TS, React, Go, etc.)."""
 
 import os
+import re
 import ast
 import tempfile
 import subprocess
@@ -8,8 +9,24 @@ from typing import Tuple, Dict, List
 from src.core.domain import ScenarioSpec, CandidateSubmission, FileChange, NonFunctionalRequirements, ArchitectureType
 
 
+CODE_EXTENSIONS = {
+    ".py": "Python",
+    ".js": "JavaScript",
+    ".jsx": "React JSX",
+    ".ts": "TypeScript",
+    ".tsx": "React TSX",
+    ".go": "Go",
+    ".rs": "Rust",
+    ".java": "Java",
+    ".json": "JSON Config",
+    ".html": "HTML",
+    ".css": "CSS",
+    ".sh": "Shell"
+}
+
+
 class GitRepoImporter:
-    """Clones a web git repository, builds the AST tree map, and extracts the target diff."""
+    """Clones a web git repository, builds a polyglot AST/Symbol tree map, and extracts the target diff."""
 
     def __init__(self, repo_url: str, target_commit: str = "HEAD"):
         self.repo_url = repo_url
@@ -20,41 +37,74 @@ class GitRepoImporter:
         result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
 
+    def parse_python_ast(self, file_path: str, rel_path: str) -> str:
+        """Parses Python AST for classes and functions."""
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        tree = ast.parse(content)
+        classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+        functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+        summary = f"Python Module {rel_path}."
+        if classes:
+            summary += f" Classes: {', '.join(classes)}."
+        if functions:
+            summary += f" Functions: {', '.join(functions)}."
+        return summary
+
+    def parse_js_ts_symbols(self, file_path: str, rel_path: str, lang: str) -> str:
+        """Extracts components, functions, classes and exports from JavaScript/TypeScript/JSX files."""
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+
+        # Find classes
+        classes = re.findall(r"class\s+([A-Za-z0-9_]+)", content)
+        # Find functions and arrow functions / components
+        functions = re.findall(r"(?:export\s+)?(?:default\s+)?function\s+([A-Za-z0-9_]+)", content)
+        const_funcs = re.findall(r"(?:export\s+)?const\s+([A-Za-z0-9_]+)\s*=\s*(?:\([^)]*\)|[A-Za-z0-9_]+)\s*=>", content)
+        all_funcs = list(dict.fromkeys(functions + const_funcs))
+
+        # Find exports
+        exports = re.findall(r"export\s+(?:default\s+)?(?:const|let|var|class|function)?\s*([A-Za-z0-9_]+)", content)
+        exports = [e for e in exports if e]
+
+        summary = f"{lang} Module `{rel_path}`."
+        if classes:
+            summary += f" Classes: {', '.join(classes)}."
+        if all_funcs:
+            summary += f" Components/Functions: {', '.join(all_funcs[:8])}."
+        if exports:
+            summary += f" Exports: {', '.join(exports[:5])}."
+        return summary
+
     def build_ast_map(self, repo_path: str) -> Dict[str, str]:
-        """Scans the repository and builds a structural AST map of all modules."""
+        """Scans the repository and builds a structural AST/Symbol map across languages."""
         codebase_map = {}
         for root, _, files in os.walk(repo_path):
-            if ".git" in root or "__pycache__" in root:
+            if any(ignored in root for ignored in [".git", "__pycache__", "node_modules", "dist", "build", ".venv"]):
                 continue
-            for file in files:
-                if file.endswith(".py"):
+            for file in sorted(files):
+                ext = os.path.splitext(file)[1].lower()
+                if ext in CODE_EXTENSIONS:
                     file_path = os.path.join(root, file)
                     rel_path = os.path.relpath(file_path, repo_path)
                     try:
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            content = f.read()
-                        tree = ast.parse(content)
-                        classes = [node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
-                        functions = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-                        summary = f"Module {rel_path}."
-                        if classes:
-                            summary += f" Classes: {', '.join(classes)}."
-                        if functions:
-                            summary += f" Functions: {', '.join(functions)}."
-                        codebase_map[rel_path] = summary
+                        if ext == ".py":
+                            codebase_map[rel_path] = self.parse_python_ast(file_path, rel_path)
+                        elif ext in [".js", ".jsx", ".ts", ".tsx"]:
+                            codebase_map[rel_path] = self.parse_js_ts_symbols(file_path, rel_path, CODE_EXTENSIONS[ext])
+                        else:
+                            codebase_map[rel_path] = f"{CODE_EXTENSIONS[ext]} Source File `{rel_path}`."
                     except Exception:
-                        codebase_map[rel_path] = f"Module {rel_path} (AST Parsing Failed)"
+                        codebase_map[rel_path] = f"Source File `{rel_path}` (Raw Inspection)."
         return codebase_map
 
     def extract_diff(self, repo_path: str) -> Tuple[str, List[FileChange], List[str]]:
         """Extracts the diff for the target commit."""
-        # Ensure we have the history to diff against
         try:
-            self.run_cmd(["git", "fetch", "--depth=2"], cwd=repo_path)
+            self.run_cmd(["git", "fetch", "--depth=5"], cwd=repo_path)
         except subprocess.CalledProcessError:
-            pass # Ignore if shallow fetch fails
+            pass
 
-        # Get the diff of the target commit vs its parent
         try:
             full_diff = self.run_cmd(["git", "show", self.target_commit], cwd=repo_path)
             commit_msg = self.run_cmd(["git", "log", "-1", "--pretty=%B", self.target_commit], cwd=repo_path)
@@ -62,7 +112,6 @@ class GitRepoImporter:
             full_diff = "No diff available."
             commit_msg = "Initial or unknown commit."
 
-        # Parse simple file changes from git --name-status
         file_changes = []
         try:
             status_output = self.run_cmd(["git", "diff", "--name-status", f"{self.target_commit}~1", self.target_commit], cwd=repo_path)
@@ -70,39 +119,31 @@ class GitRepoImporter:
                 if not line.strip():
                     continue
                 parts = line.split("\t")
-                status = parts[0]
-                path = parts[1]
-                
-                # Get specific file diff
-                try:
-                    file_diff = self.run_cmd(["git", "diff", f"{self.target_commit}~1", self.target_commit, "--", path], cwd=repo_path)
-                except subprocess.CalledProcessError:
-                    file_diff = ""
-                
-                file_changes.append(FileChange(
-                    path=path,
-                    diff_content=file_diff,
-                    is_new_file=(status == "A")
-                ))
+                if len(parts) >= 2:
+                    status, path = parts[0], parts[1]
+                    try:
+                        file_diff = self.run_cmd(["git", "diff", f"{self.target_commit}~1", self.target_commit, "--", path], cwd=repo_path)
+                    except subprocess.CalledProcessError:
+                        file_diff = ""
+
+                    file_changes.append(FileChange(
+                        path=path,
+                        diff_content=file_diff,
+                        is_new_file=(status == "A")
+                    ))
         except subprocess.CalledProcessError:
-            pass # Single commit repo or error
+            pass
 
         return full_diff, file_changes, [commit_msg]
 
     def ingest(self) -> Tuple[ScenarioSpec, CandidateSubmission]:
         """Main ingestion entrypoint. Returns the Scenario and Submission objects."""
         repo_name = self.repo_url.split("/")[-1].replace(".git", "")
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             repo_path = os.path.join(temp_dir, repo_name)
-            
-            # Clone repo
             self.run_cmd(["git", "clone", "--depth", "10", self.repo_url, repo_path], cwd=temp_dir)
-            
-            # Build AST map of the whole repository
             ast_map = self.build_ast_map(repo_path)
-            
-            # Extract diff and commit info
             full_diff, file_changes, commit_messages = self.extract_diff(repo_path)
 
         spec = ScenarioSpec(
@@ -111,7 +152,7 @@ class GitRepoImporter:
             github_repo=self.repo_url,
             difficulty="Senior",
             architecture_type=ArchitectureType.MODULAR_MONOLITH,
-            description="Live evaluation of a custom GitHub repository commit.",
+            description=f"Live architectural review of GitHub repository {repo_name}.",
             requirements=NonFunctionalRequirements(),
             existing_codebase_map=ast_map,
             ground_truth_flaw="Unknown (Live Evaluation)",
@@ -124,7 +165,7 @@ class GitRepoImporter:
             commit_messages=commit_messages,
             file_changes=file_changes,
             full_diff=full_diff,
-            explanation_notes="Automatically extracted via GitImporter."
+            explanation_notes="Automatically extracted via Polyglot GitImporter."
         )
 
         return spec, submission

@@ -105,6 +105,12 @@ class LoadSimulationResult(BaseModel):
     distributed_deadlock_detected: bool = False
     memory_peak_mb: float = 0.0
     sla_met: bool = True
+    severity_multiplier: float = Field(
+        default=0.0,
+        ge=0.0, le=1.0,
+        description="Continuous severity signal: 0.0=no issue, 1.0=catastrophic failure. "
+                    "Computed from how far beyond SLA thresholds the metrics fall."
+    )
     details: str = ""
 
 
