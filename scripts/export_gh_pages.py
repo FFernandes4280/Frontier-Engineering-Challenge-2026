@@ -714,7 +714,7 @@ def build_github_pages():
             if (modal) modal.hide();
         }
 
-        async function callGroqLive(messages, model = "llama-3.1-8b-instant", temperature = 0.2) {
+        async function callGroqLive(messages, model = "openai/gpt-oss-20b", temperature = 0.2) {
             const key = getApiKey();
             if (!key) throw new Error("No API key configured");
             const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -925,7 +925,7 @@ def build_github_pages():
                     const res = await callGroqLive([
                         { role: "system", content: "You are a Principal Software Architect evaluating candidate code diffs." },
                         { role: "user", content: prompt }
-                    ], "llama-3.1-8b-instant");
+                    ], "openai/gpt-oss-20b");
                     liveSummary = res.content;
                     liveLatency = Math.round(performance.now() - t0);
                     isLive = true;
@@ -1102,7 +1102,7 @@ Output just the review text.`;
                     const res = await callGroqLive([
                         { role: "system", content: "You are a Principal Software Architect evaluating candidate code repositories. Be precise and technical." },
                         { role: "user", content: prompt }
-                    ], "llama-3.1-70b-versatile");
+                    ], "openai/gpt-oss-120b");
                     
                     liveSummary = res.content;
                     liveLatency = Math.round(performance.now() - t0);
