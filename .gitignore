@@ -22,8 +22,9 @@ venv/
 htmlcov/
 *.log
 
-# Generated runtime traces
+# Generated runtime traces and trajectories
 traces/
+trajectories/
 eval/benchmark_results.json
 
 # IDE settings
@@ -33,4 +34,3 @@ eval/benchmark_results.json
 
 # SQLite database
 db.sqlite3
-
