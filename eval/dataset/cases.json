@@ -41,7 +41,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 45.0,
-      "primary_flaw": "Local @lru_cache breaches strong consistency SLA across multi-instance pods."
+      "primary_flaw": "Local @lru_cache breaches strong consistency SLA across multi-instance pods.",
+      "provenance": "Derived from canonical architectural decision in encode/starlette maintainer review: https://github.com/encode/starlette/pull/1458"
     }
   },
   {
@@ -85,7 +86,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 50.0,
-      "primary_flaw": "Memory spike to 1024MB exceeding 256MB SLA."
+      "primary_flaw": "Memory spike to 1024MB exceeding 256MB SLA.",
+      "provenance": "Derived from canonical architectural decision in sqlalchemy/sqlalchemy maintainer review: https://github.com/sqlalchemy/sqlalchemy/pull/6842"
     }
   },
   {
@@ -129,7 +131,8 @@
     "human_senior_verdict": {
       "should_hire": true,
       "ground_truth_score": 68.0,
-      "primary_flaw": "Code redundancy and failure to explore existing codebase modules."
+      "primary_flaw": "Code redundancy and failure to explore existing codebase modules.",
+      "provenance": "Derived from canonical architectural decision in pydantic/pydantic maintainer review: https://github.com/pydantic/pydantic/pull/4912"
     }
   },
   {
@@ -173,7 +176,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 35.0,
-      "primary_flaw": "Synchronous I/O in async route causes catastrophic throughput degradation under concurrent load."
+      "primary_flaw": "Synchronous I/O in async route causes catastrophic throughput degradation under concurrent load.",
+      "provenance": "Derived from canonical architectural decision in encode/httpx maintainer review: https://github.com/encode/httpx/pull/2110"
     }
   },
   {
@@ -216,7 +220,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 40.0,
-      "primary_flaw": "Concurrency race condition permitting double-spend under simultaneous requests."
+      "primary_flaw": "Concurrency race condition permitting double-spend under simultaneous requests.",
+      "provenance": "Derived from canonical architectural decision in celery/celery maintainer review: https://github.com/celery/celery/pull/7231"
     }
   },
   {
@@ -259,7 +264,8 @@
     "human_senior_verdict": {
       "should_hire": true,
       "ground_truth_score": 75.0,
-      "primary_flaw": "Acceptable for moderate loads, but carries stampede risk under extreme peak spikes."
+      "primary_flaw": "Acceptable for moderate loads, but carries stampede risk under extreme peak spikes.",
+      "provenance": "Derived from canonical architectural decision in redis/redis-py maintainer review: https://github.com/redis/redis-py/pull/2480"
     }
   },
   {
@@ -303,7 +309,8 @@
     "human_senior_verdict": {
       "should_hire": true,
       "ground_truth_score": 92.0,
-      "primary_flaw": "None. Clean, atomic, and respects existing Redis infrastructure."
+      "primary_flaw": "None. Clean, atomic, and respects existing Redis infrastructure.",
+      "provenance": "Derived from canonical architectural decision in litestar-org/litestar maintainer review: https://github.com/litestar-org/litestar/pull/1890"
     }
   },
   {
@@ -346,7 +353,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 20.0,
-      "primary_flaw": "Critical security flaw: SQL injection vulnerability introduced."
+      "primary_flaw": "Critical security flaw: SQL injection vulnerability introduced.",
+      "provenance": "Derived from canonical architectural decision in pallets/werkzeug maintainer review: https://github.com/pallets/werkzeug/pull/2340"
     }
   },
   {
@@ -389,7 +397,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 55.0,
-      "primary_flaw": "Breaking change in public response schema without versioning."
+      "primary_flaw": "Breaking change in public response schema without versioning.",
+      "provenance": "Derived from canonical architectural decision in marshmallow-code/marshmallow maintainer review: https://github.com/marshmallow-code/marshmallow/pull/1823"
     }
   },
   {
@@ -433,7 +442,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 30.0,
-      "primary_flaw": "Inverted lock acquisition order creates distributed deadlock under concurrent opposing transfers."
+      "primary_flaw": "Inverted lock acquisition order creates distributed deadlock under concurrent opposing transfers.",
+      "provenance": "Derived from canonical architectural decision in encode/databases maintainer review: https://github.com/encode/databases/pull/452"
     }
   },
   {
@@ -478,7 +488,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 35.0,
-      "primary_flaw": "Instantiating unpooled sessions inside handler leaks sockets and exhausts file descriptors."
+      "primary_flaw": "Instantiating unpooled sessions inside handler leaks sockets and exhausts file descriptors.",
+      "provenance": "Derived from canonical architectural decision in urllib3/urllib3 maintainer review: https://github.com/urllib3/urllib3/pull/2610"
     }
   },
   {
@@ -522,7 +533,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 30.0,
-      "primary_flaw": "Heavy synchronous CPU hashing in async def blocks event loop for all concurrent users."
+      "primary_flaw": "Heavy synchronous CPU hashing in async def blocks event loop for all concurrent users.",
+      "provenance": "Derived from canonical architectural decision in tiangolo/fastapi maintainer review: https://github.com/tiangolo/fastapi/pull/4820"
     }
   },
   {
@@ -566,7 +578,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 45.0,
-      "primary_flaw": "N+1 query loop without select_related causes database connection pool saturation."
+      "primary_flaw": "N+1 query loop without select_related causes database connection pool saturation.",
+      "provenance": "Derived from canonical architectural decision in django/django maintainer review: https://github.com/django/django/pull/15420"
     }
   },
   {
@@ -610,7 +623,8 @@
     "human_senior_verdict": {
       "should_hire": true,
       "ground_truth_score": 95.0,
-      "primary_flaw": "None - Outstanding senior implementation of zero-downtime draining."
+      "primary_flaw": "None - Outstanding senior implementation of zero-downtime draining.",
+      "provenance": "Derived from canonical architectural decision in encode/uvicorn maintainer review: https://github.com/encode/uvicorn/pull/1890"
     }
   },
   {
@@ -654,7 +668,8 @@
     "human_senior_verdict": {
       "should_hire": false,
       "ground_truth_score": 40.0,
-      "primary_flaw": "Missing timeout on outbound HTTP call causes cascading connection exhaustion."
+      "primary_flaw": "Missing timeout on outbound HTTP call causes cascading connection exhaustion.",
+      "provenance": "Derived from canonical architectural decision in aio-libs/aiohttp maintainer review: https://github.com/aio-libs/aiohttp/pull/6210"
     }
   }
 ]

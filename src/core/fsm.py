@@ -1,9 +1,9 @@
 """Finite State Machine execution engine for autonomous agents."""
 
-import asyncio
-from typing import Callable, Coroutine, Dict, Any
-from src.core.state import AgentContext, AgentStatus
+from collections.abc import Callable, Coroutine
+from typing import Any
 
+from src.core.state import AgentContext, AgentStatus
 
 StateHandler = Callable[[AgentContext], Coroutine[Any, Any, AgentStatus]]
 
@@ -13,7 +13,7 @@ class StateMachineAgent:
 
     def __init__(self, context: AgentContext):
         self.context = context
-        self.handlers: Dict[AgentStatus, StateHandler] = {}
+        self.handlers: dict[AgentStatus, StateHandler] = {}
 
     def register_handler(self, state: AgentStatus, handler: StateHandler) -> None:
         """Register an async handler function for a specific state."""
@@ -46,7 +46,7 @@ class StateMachineAgent:
                     trigger="exception_in_handler",
                     details={"error": str(e), "state": current_state.value}
                 )
-                self.context.error_message = f"Unhandled exception in state {current_state}: {str(e)}"
+                self.context.error_message = f"Unhandled exception in state {current_state}: {e!s}"
                 break
 
         return self.context

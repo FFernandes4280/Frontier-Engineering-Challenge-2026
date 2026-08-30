@@ -1,8 +1,8 @@
 """Dynamic Test Synthesizer Agent: Generates targeted concurrency & stress tests from diff and AST."""
 
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
-from src.core.domain import ScenarioSpec, CandidateSubmission
+from pydantic import BaseModel
+
+from src.core.domain import CandidateSubmission, ScenarioSpec
 
 
 class SynthesizedTest(BaseModel):
@@ -22,9 +22,9 @@ class DynamicTestSynthesizerAgent:
     def __init__(self):
         self.name = "DynamicTestSynthesizerAgent"
 
-    def synthesize_suite(self, submission: CandidateSubmission, spec: ScenarioSpec) -> List[SynthesizedTest]:
+    def synthesize_suite(self, submission: CandidateSubmission, spec: ScenarioSpec) -> list[SynthesizedTest]:
         """Synthesizes targeted dynamic tests based on the AST and diff patterns."""
-        tests: List[SynthesizedTest] = []
+        tests: list[SynthesizedTest] = []
         diff_lower = (submission.full_diff or "").lower()
 
         # 1. Concurrency / In-Memory State Drift Test

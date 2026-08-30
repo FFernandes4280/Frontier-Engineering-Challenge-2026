@@ -1,6 +1,11 @@
 """Agent 2: Code Evolution & Context Alignment Agent."""
 
-from src.core.domain import CandidateSubmission, ScenarioSpec, BlastRadiusMetrics, ContextAlignmentMetrics
+from src.core.domain import (
+    BlastRadiusMetrics,
+    CandidateSubmission,
+    ContextAlignmentMetrics,
+    ScenarioSpec,
+)
 from src.tools.blast_radius import BlastRadiusAnalyzer
 from src.tools.context_inspector import ContextInspector
 

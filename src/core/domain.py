@@ -1,7 +1,7 @@
 """Domain models for the Senior Software Engineering Vetting System."""
 
 from enum import Enum
-from typing import Dict, List, Optional, Any
+
 from pydantic import BaseModel, Field
 
 
@@ -39,14 +39,14 @@ class ScenarioSpec(BaseModel):
     """Specification of the distributed engineering problem grounded in real open-source codebases."""
     scenario_id: str
     title: str
-    github_repo: Optional[str] = None
-    pr_url: Optional[str] = None
-    historical_version: Optional[str] = None
+    github_repo: str | None = None
+    pr_url: str | None = None
+    historical_version: str | None = None
     difficulty: str = "Senior"
     architecture_type: ArchitectureType = ArchitectureType.DISTRIBUTED_API
     description: str
     requirements: NonFunctionalRequirements = Field(default_factory=NonFunctionalRequirements)
-    existing_codebase_map: Dict[str, str] = Field(
+    existing_codebase_map: dict[str, str] = Field(
         default_factory=dict,
         description="File path to file summary/purpose in the existing repo"
     )
@@ -71,17 +71,17 @@ class CandidateSubmission(BaseModel):
     """Candidate's submitted solution and git history."""
     candidate_id: str
     scenario_id: str
-    commit_messages: List[str] = Field(default_factory=list)
-    file_changes: List[FileChange] = Field(default_factory=list)
+    commit_messages: list[str] = Field(default_factory=list)
+    file_changes: list[FileChange] = Field(default_factory=list)
     full_diff: str = ""
-    explanation_notes: Optional[str] = None
+    explanation_notes: str | None = None
 
 
 class BlastRadiusMetrics(BaseModel):
     """Metrics evaluating how clean and focused the candidate's diff is."""
     files_modified_count: int = 0
     total_lines_changed: int = 0
-    unnecessary_files_modified: List[str] = Field(default_factory=list)
+    unnecessary_files_modified: list[str] = Field(default_factory=list)
     cyclomatic_complexity_delta: int = 0
     blast_radius_score: float = 1.0
 
@@ -89,7 +89,7 @@ class BlastRadiusMetrics(BaseModel):
 class ContextAlignmentMetrics(BaseModel):
     """Metrics assessing if the candidate respected existing codebase patterns."""
     reused_existing_utilities: bool = True
-    ignored_existing_modules: List[str] = Field(default_factory=list)
+    ignored_existing_modules: list[str] = Field(default_factory=list)
     duplicated_logic_detected: bool = False
     api_contract_preserved: bool = True
     alignment_score: float = 1.0
@@ -120,19 +120,19 @@ class VerificationReport(BaseModel):
     total_functional_tests: int = 0
     all_tests_passed: bool = True
     load_metrics: LoadSimulationResult = Field(default_factory=LoadSimulationResult)
-    security_vulnerabilities_found: List[str] = Field(default_factory=list)
+    security_vulnerabilities_found: list[str] = Field(default_factory=list)
     static_analysis_clean: bool = True
 
 
 class EvidenceCitation(BaseModel):
     """Specific line-by-line evidence cited in the vetting dossier."""
     file_path: str
-    line_start: Optional[int] = None
-    line_end: Optional[int] = None
+    line_start: int | None = None
+    line_end: int | None = None
     severity: FindingSeverity
     title: str
     explanation: str
-    code_snippet: Optional[str] = None
+    code_snippet: str | None = None
 
 
 class SeniorVettingDossier(BaseModel):
@@ -146,6 +146,7 @@ class SeniorVettingDossier(BaseModel):
     code_quality_reusability_score: float = Field(ge=0.0, le=100.0)
     executive_summary: str
     trade_off_analysis: str
-    evidence_citations: List[EvidenceCitation] = Field(default_factory=list)
-    primary_flaws_flagged: List[str] = Field(default_factory=list)
+    evidence_citations: list[EvidenceCitation] = Field(default_factory=list)
+    primary_flaws_flagged: list[str] = Field(default_factory=list)
     human_in_the_loop_approval_needed: bool = False
+    evaluator_mode: str = "multi-agent-system"

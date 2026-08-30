@@ -1,23 +1,28 @@
 """FSM Orchestrator connecting the specialized agent squad to the state machine with verbose tracing and interactive human quality gate."""
 
-import uuid
 import sys
-from typing import Dict, Any, Tuple, Optional
+import uuid
+from typing import Any
+
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 from rich.prompt import Prompt
+from rich.table import Table
 
-from src.core.state import AgentContext, AgentStatus
-from src.core.fsm import StateMachineAgent
-from src.core.domain import ScenarioSpec, CandidateSubmission, SeniorVettingDossier, RecommendationType
-from src.tracing.logger import TraceLogger
-from src.agents.orchestrator_agent import ScenarioProvisionerAgent
-from src.agents.test_synthesizer import DynamicTestSynthesizerAgent
-from src.agents.telemetry_agent import CodeEvolutionAlignmentAgent
-from src.agents.verifier_agent import CodeVerifierAgent
 from src.agents.critic_agent import SeniorEngineeringCriticAgent
-
+from src.agents.orchestrator_agent import ScenarioProvisionerAgent
+from src.agents.telemetry_agent import CodeEvolutionAlignmentAgent
+from src.agents.test_synthesizer import DynamicTestSynthesizerAgent
+from src.agents.verifier_agent import CodeVerifierAgent
+from src.core.domain import (
+    CandidateSubmission,
+    RecommendationType,
+    ScenarioSpec,
+    SeniorVettingDossier,
+)
+from src.core.fsm import StateMachineAgent
+from src.core.state import AgentContext, AgentStatus
+from src.tracing.logger import TraceLogger
 
 console = Console()
 
@@ -39,7 +44,7 @@ class HolisticVettingOrchestrator:
         self,
         submission: CandidateSubmission,
         spec: ScenarioSpec
-    ) -> Tuple[SeniorVettingDossier, TraceLogger]:
+    ) -> tuple[SeniorVettingDossier, TraceLogger]:
         """Runs the complete FSM pipeline with tracing and error safety."""
         run_id = str(uuid.uuid4())[:8]
         logger = TraceLogger(
@@ -65,7 +70,7 @@ class HolisticVettingOrchestrator:
         fsm = StateMachineAgent(context)
 
         # Shared state storage across handlers
-        pipeline_data: Dict[str, Any] = {}
+        pipeline_data: dict[str, Any] = {}
 
         # 1. INITIALIZING Handler
         async def handle_initializing(ctx: AgentContext) -> AgentStatus:
@@ -183,6 +188,26 @@ class HolisticVettingOrchestrator:
                 verification_report=pipeline_data["verification"]
             )
             pipeline_data["dossier"] = dossier
+            logger.log_step(
+                event_type="LLM_SYNTHESIS",
+                agent_name=self.critic_agent.name,
+                state=AgentStatus.VERIFYING.value,
+                input_data={"candidate_id": submission.candidate_id, "scenario_id": spec.scenario_id},
+                output_data={
+                    "overall_score": dossier.overall_vetting_score,
+                    "recommendation": dossier.recommendation.value,
+                    "architecture_score": dossier.architecture_score,
+                    "concurrency_score": dossier.concurrency_scalability_score,
+                    "code_quality_score": dossier.code_quality_reusability_score,
+                    "executive_summary": dossier.executive_summary,
+                    "trade_offs": dossier.trade_off_analysis,
+                    "flaws_flagged": dossier.primary_flaws_flagged
+                },
+                tokens=self.critic_agent.last_tokens,
+                cost_usd=self.critic_agent.last_cost_usd,
+                latency_ms=self.critic_agent.last_latency_ms,
+                metadata={"calibrated_score": dossier.overall_vetting_score}
+            )
             return AgentStatus.HUMAN_CHECKPOINT if dossier.human_in_the_loop_approval_needed else AgentStatus.COMPLETED
 
         # 5. HUMAN_CHECKPOINT Handler (Contextual Review Card & Interactive Approval)

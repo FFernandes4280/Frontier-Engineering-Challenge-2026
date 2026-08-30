@@ -1,13 +1,13 @@
 """Unified LLM interface with multi-model fallback pool and accurate Groq Cloud cost accounting."""
 
+import logging
 import os
 import time
-import asyncio
-import logging
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from typing import Any
+
 import litellm
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 load_dotenv(".env")
 
@@ -17,7 +17,7 @@ litellm.set_verbose = False
 logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
 
 # Published Groq Cloud token pricing ($ per token)
-GROQ_MODEL_PRICING: Dict[str, Dict[str, float]] = {
+GROQ_MODEL_PRICING: dict[str, dict[str, float]] = {
     "groq/openai/gpt-oss-120b": {"input": 0.00000015, "output": 0.00000060},
     "groq/openai/gpt-oss-20b":  {"input": 0.000000075, "output": 0.00000030},
     "groq/qwen/qwen3.8-27b":    {"input": 0.00000020, "output": 0.00000060},
@@ -28,7 +28,6 @@ GROQ_MODEL_PRICING: Dict[str, Dict[str, float]] = {
 
 class MissingAPIKeyError(ValueError):
     """Raised when no valid LLM API key is configured."""
-    pass
 
 
 def validate_api_keys() -> str:
@@ -52,30 +51,30 @@ def validate_api_keys() -> str:
 class LLMResponse(BaseModel):
     """Structured response from LLM call including tracking metadata."""
     content: str
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: list[dict[str, Any]] | None = None
     model: str
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
     cost_usd: float = 0.0
     latency_ms: float = 0.0
-    raw_response: Optional[Any] = Field(default=None, exclude=True)
+    raw_response: Any | None = Field(default=None, exclude=True)
 
 
 class LLMClient:
     """Robust LLM client with automatic rotation across candidate model pool and accurate cost calculation."""
 
-    def __init__(self, default_model: Optional[str] = None):
+    def __init__(self, default_model: str | None = None):
         self.default_model = default_model or os.getenv("DEFAULT_MODEL", "groq/openai/gpt-oss-20b")
         litellm.drop_params = True
 
     async def acomplete(
         self,
-        messages: List[Dict[str, str]],
-        model: Optional[str] = None,
+        messages: list[dict[str, str]],
+        model: str | None = None,
         temperature: float = 0.2,
-        tools: Optional[List[Dict[str, Any]]] = None,
-        response_format: Optional[Any] = None,
+        tools: list[dict[str, Any]] | None = None,
+        response_format: Any | None = None,
         **kwargs
     ) -> LLMResponse:
         """Execute async completion rotating through fallback models without hanging."""
@@ -96,7 +95,7 @@ class LLMClient:
         start_time = time.perf_counter()
 
         for current_model in candidate_models:
-            params: Dict[str, Any] = {
+            params: dict[str, Any] = {
                 "model": current_model,
                 "messages": messages,
                 "temperature": temperature,

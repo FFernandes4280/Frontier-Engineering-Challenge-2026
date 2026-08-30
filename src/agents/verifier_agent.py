@@ -1,6 +1,11 @@
 """Agent 3: Static, Security & Load Performance Verifier."""
 
-from src.core.domain import CandidateSubmission, ScenarioSpec, VerificationReport, LoadSimulationResult
+from src.core.domain import (
+    CandidateSubmission,
+    LoadSimulationResult,
+    ScenarioSpec,
+    VerificationReport,
+)
 from src.tools.load_simulator import LoadSimulator
 
 

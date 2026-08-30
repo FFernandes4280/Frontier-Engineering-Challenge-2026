@@ -1,7 +1,8 @@
 """Tool: Concurrency & Distributed Load Performance Simulator with Calibrated Severity."""
 
 import re
-from src.core.domain import CandidateSubmission, ScenarioSpec, LoadSimulationResult
+
+from src.core.domain import CandidateSubmission, LoadSimulationResult, ScenarioSpec
 
 
 class LoadSimulator:

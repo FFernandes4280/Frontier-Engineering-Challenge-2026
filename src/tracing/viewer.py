@@ -1,14 +1,12 @@
 """Interactive Terminal Viewer for Agent Trajectories."""
 
-import os
 import glob
 import json
-from typing import Optional
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.syntax import Syntax
+import os
 
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 

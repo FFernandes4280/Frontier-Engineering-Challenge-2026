@@ -1,9 +1,10 @@
 """Dual Tracing Engine: Structured JSONL streaming + Formatted JSON + Markdown."""
 
-import os
 import json
-from typing import Any, Dict, List, Optional
+import os
 from datetime import datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -13,13 +14,13 @@ class TraceStep(BaseModel):
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     event_type: str  # SYSTEM_PROMPT, USER_INPUT, LLM_CALL, TOOL_CALL, TOOL_RESPONSE, STATE_CHANGE, VERIFICATION
     agent_name: str
-    state: Optional[str] = None
-    input_data: Optional[Any] = None
-    output_data: Optional[Any] = None
+    state: str | None = None
+    input_data: Any | None = None
+    output_data: Any | None = None
     tokens: int = 0
     cost_usd: float = 0.0
     latency_ms: float = 0.0
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class TrajectoryLog(BaseModel):
@@ -28,18 +29,18 @@ class TrajectoryLog(BaseModel):
     runner_type: str  # baseline or advanced
     task_id: str
     start_time: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    end_time: Optional[str] = None
+    end_time: str | None = None
     success: bool = False
     total_tokens: int = 0
     total_cost_usd: float = 0.0
     total_duration_ms: float = 0.0
-    steps: List[TraceStep] = Field(default_factory=list)
+    steps: list[TraceStep] = Field(default_factory=list)
 
 
 class TraceLogger:
     """Manages appending trace steps and exporting human-friendly views."""
 
-    def __init__(self, run_id: str, runner_type: str, task_id: str, trace_dir: str = "./traces"):
+    def __init__(self, run_id: str, runner_type: str, task_id: str, trace_dir: str = "./trajectories"):
         self.trace_dir = trace_dir
         os.makedirs(trace_dir, exist_ok=True)
         self.trajectory = TrajectoryLog(
@@ -56,13 +57,13 @@ class TraceLogger:
         self,
         event_type: str,
         agent_name: str,
-        state: Optional[str] = None,
-        input_data: Optional[Any] = None,
-        output_data: Optional[Any] = None,
+        state: str | None = None,
+        input_data: Any | None = None,
+        output_data: Any | None = None,
         tokens: int = 0,
         cost_usd: float = 0.0,
         latency_ms: float = 0.0,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> TraceStep:
         """Log a single step immediately to JSONL and internal trajectory."""
         self._step_counter += 1

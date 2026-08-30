@@ -1,9 +1,8 @@
 """Tool: Context & Architectural Reusability Inspector (Broadened Pattern Detection)."""
 
 import re
-from typing import List, Dict, Set
-from src.core.domain import CandidateSubmission, ScenarioSpec, ContextAlignmentMetrics
 
+from src.core.domain import CandidateSubmission, ContextAlignmentMetrics, ScenarioSpec
 
 MODULE_KEYWORD_MAP = {
     "validator": {"validate", "validation", "re.compile", "pattern", "regex", "check", "verify", "sanitize"},
@@ -25,7 +24,7 @@ class ContextInspector:
     """
 
     @staticmethod
-    def _extract_diff_keywords(diff_text: str) -> Set[str]:
+    def _extract_diff_keywords(diff_text: str) -> set[str]:
         """Extract meaningful keywords from diff (added lines only)."""
         keywords = set()
         for line in diff_text.split("\n"):
@@ -36,7 +35,7 @@ class ContextInspector:
         return keywords
 
     @staticmethod
-    def _compute_module_overlap(module_path: str, module_desc: str, diff_keywords: Set[str]) -> float:
+    def _compute_module_overlap(module_path: str, module_desc: str, diff_keywords: set[str]) -> float:
         """Compute semantic overlap score between an existing module and the diff keywords."""
         path_lower = module_path.lower()
         desc_lower = module_desc.lower()

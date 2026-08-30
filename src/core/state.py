@@ -1,9 +1,10 @@
 """State definitions and models for the Agent FSM."""
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
 from datetime import datetime
+from enum import Enum
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
 class AgentStatus(str, Enum):
@@ -25,7 +26,7 @@ class StateTransition(BaseModel):
     to_state: AgentStatus
     trigger: str
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 class AgentContext(BaseModel):
@@ -33,17 +34,17 @@ class AgentContext(BaseModel):
     task_id: str
     task_input: str
     current_state: AgentStatus = AgentStatus.INITIALIZING
-    state_history: List[StateTransition] = Field(default_factory=list)
-    memory: Dict[str, Any] = Field(default_factory=dict)
-    tool_calls: List[Dict[str, Any]] = Field(default_factory=list)
+    state_history: list[StateTransition] = Field(default_factory=list)
+    memory: dict[str, Any] = Field(default_factory=dict)
+    tool_calls: list[dict[str, Any]] = Field(default_factory=list)
     verification_attempts: int = 0
     max_verification_attempts: int = 3
-    final_output: Optional[str] = None
-    error_message: Optional[str] = None
+    final_output: str | None = None
+    error_message: str | None = None
     total_tokens: int = 0
     total_cost_usd: float = 0.0
 
-    def transition_to(self, new_state: AgentStatus, trigger: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def transition_to(self, new_state: AgentStatus, trigger: str, details: dict[str, Any] | None = None) -> None:
         """Record and transition the agent to a new state."""
         transition = StateTransition(
             from_state=self.current_state,

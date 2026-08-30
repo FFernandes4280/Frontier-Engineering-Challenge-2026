@@ -1,8 +1,8 @@
 """Tool: Blast Radius & Diff Quality Analyzer."""
 
 import re
-from typing import List
-from src.core.domain import CandidateSubmission, BlastRadiusMetrics, ScenarioSpec
+
+from src.core.domain import BlastRadiusMetrics, CandidateSubmission, ScenarioSpec
 
 
 class BlastRadiusAnalyzer:

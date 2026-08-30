@@ -1,23 +1,29 @@
 """Agent 4: Senior Engineering Alignment Critic with Continuous Scoring & LLM Calibration."""
 
+import json
 import os
 import re
-import json
-from typing import Dict, Any, List
+from typing import Any
+
 from src.core.domain import (
-    ScenarioSpec,
     CandidateSubmission,
-    VerificationReport,
-    SeniorVettingDossier,
-    RecommendationType,
+    EvidenceCitation,
     FindingSeverity,
-    EvidenceCitation
+    RecommendationType,
+    ScenarioSpec,
+    SeniorVettingDossier,
+    VerificationReport,
 )
 from src.core.llm import LLMClient
 
 
-CRITIC_SYSTEM_PROMPT = """You are a Principal Software Architect and Senior Vetting Evaluator for micro1.
+def get_critic_system_prompt(seniority: str) -> str:
+    return f"""You are a Principal Software Architect and Senior Vetting Evaluator for micro1.
 Your role is to produce a rigorous, grounded, and evidence-backed technical evaluation.
+You are evaluating a candidate for a {seniority.upper()} Software Engineer position.
+
+If the candidate is Junior/Mid-Level: be forgiving of minor architectural debt as long as functional requirements are met.
+If the candidate is Senior/Principal: enforce strict adherence to SLAs, zero-downtime constraints, and distributed systems best practices.
 
 You will receive:
 1. The scenario specification and the KNOWN architectural flaw in the repository
@@ -62,11 +68,20 @@ class SeniorEngineeringCriticAgent:
 
     def _compute_formula_score(
         self,
-        alignment_data: Dict[str, Any],
+        alignment_data: dict[str, Any],
         verification_report: VerificationReport,
         spec: ScenarioSpec
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Compute continuous scores using severity-graduated signals from tools."""
+        
+        # Apply seniority multiplier
+        seniority = spec.difficulty.upper()
+        severity_multiplier = 1.0
+        if seniority in ["JUNIOR", "MID-LEVEL", "MID"]:
+            severity_multiplier = 0.5
+        elif seniority == "CHALLENGING":
+            severity_multiplier = 1.2
+            
         
         blast_score = alignment_data.get("blast_radius", {}).get("blast_radius_score", 1.0)
         context_score = alignment_data.get("context_alignment", {}).get("alignment_score", 1.0)
@@ -76,7 +91,7 @@ class SeniorEngineeringCriticAgent:
         severity = load.severity_multiplier  # 0.0 = no issue, 1.0 = catastrophic
 
         # --- Architecture Score (continuous) ---
-        arch_score = 95.0 - (severity * 75.0)
+        arch_score = 95.0 - (severity * 75.0 * severity_multiplier)
         
         # Additional penalty for security vulnerabilities (e.g. SQLi)
         if not verification_report.static_analysis_clean:
@@ -89,7 +104,7 @@ class SeniorEngineeringCriticAgent:
         arch_score = max(10.0, min(95.0, arch_score))
 
         # --- Concurrency/Scalability Score (continuous) ---
-        scalability_score = 92.0 - (severity * 67.0)
+        scalability_score = 92.0 - (severity * 67.0 * severity_multiplier)
         
         # Penalty for broken API contracts on downstream clients
         if not api_contract_preserved:
@@ -125,7 +140,7 @@ class SeniorEngineeringCriticAgent:
         self,
         submission: CandidateSubmission,
         spec: ScenarioSpec,
-        alignment_data: Dict[str, Any],
+        alignment_data: dict[str, Any],
         verification_report: VerificationReport
     ) -> SeniorVettingDossier:
         """Produces the final holistic vetting dossier with formula + LLM calibration."""
@@ -137,8 +152,8 @@ class SeniorEngineeringCriticAgent:
         api_contract_preserved = alignment_data.get("context_alignment", {}).get("api_contract_preserved", True)
 
         # Step 2: Collect evidence citations and flaws
-        citations: List[EvidenceCitation] = []
-        flaws: List[str] = []
+        citations: list[EvidenceCitation] = []
+        flaws: list[str] = []
 
         if not load.sla_met or load.distributed_deadlock_detected or load.error_rate_pct > 0.0:
             flaws.append(load.details)
@@ -208,9 +223,10 @@ class SeniorEngineeringCriticAgent:
             f"Based on ALL evidence above, provide your CalibratedScore, Recommendation, and Summary."
         )
 
+        sys_prompt = get_critic_system_prompt(spec.difficulty)
         llm_res = await self.llm_client.acomplete(
             messages=[
-                {"role": "system", "content": CRITIC_SYSTEM_PROMPT},
+                {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_msg}
             ],
             model=self.model,

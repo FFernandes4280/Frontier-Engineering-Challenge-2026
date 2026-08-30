@@ -1,15 +1,15 @@
 """CLI for reviewing custom web git repositories."""
 
 import asyncio
+
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.markdown import Markdown
+from rich.table import Table
 
-from src.tools.git_importer import GitRepoImporter
-from src.baseline.runner import BaselineVettingRunner
 from src.agents.orchestrator_fsm import HolisticVettingOrchestrator
-
+from src.baseline.runner import BaselineVettingRunner
+from src.tools.git_importer import GitRepoImporter
 
 app = typer.Typer(help="Review custom Git repositories and PRs.")
 console = Console()

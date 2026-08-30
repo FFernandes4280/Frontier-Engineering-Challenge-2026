@@ -12,9 +12,12 @@ from src.baseline.runner import BaselineVettingRunner
 from src.agents.orchestrator_fsm import HolisticVettingOrchestrator
 from src.tools.git_importer import GitRepoImporter
 
-DATASET_PATH = "eval/dataset/cases.json"
-BENCHMARK_RESULTS_PATH = "eval/benchmark_results.json"
-TRACES_DIR = "traces"
+import os
+from django.conf import settings
+BASE_DIR = settings.BASE_DIR
+DATASET_PATH = os.path.join(BASE_DIR, "eval", "dataset", "cases.json")
+BENCHMARK_RESULTS_PATH = os.path.join(BASE_DIR, "eval", "benchmark_results.json")
+TRACES_DIR = os.path.join(BASE_DIR, "trajectories")
 
 
 def _load_cases():

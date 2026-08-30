@@ -3,14 +3,18 @@
 import os
 import re
 import uuid
-from typing import Tuple
+
 from rich.console import Console
 from rich.panel import Panel
 
-from src.core.domain import ScenarioSpec, CandidateSubmission, SeniorVettingDossier, RecommendationType
+from src.core.domain import (
+    CandidateSubmission,
+    RecommendationType,
+    ScenarioSpec,
+    SeniorVettingDossier,
+)
 from src.core.llm import LLMClient
 from src.tracing.logger import TraceLogger
-
 
 console = Console()
 
@@ -46,7 +50,7 @@ Summary: <A detailed, 2-3 sentence technical justification citing the exact arch
 class BaselineVettingRunner:
     """Baseline solution evaluating code diffs using advanced prompt engineering without dynamic execution."""
 
-    def __init__(self, model: str = None, trace_dir: str = "./traces", verbose: bool = False):
+    def __init__(self, model: str = None, trace_dir: str = "./trajectories", verbose: bool = False):
         self.model = model or os.getenv("BASELINE_MODEL", "groq/openai/gpt-oss-120b")
         self.llm_client = LLMClient(default_model=self.model)
         self.trace_dir = trace_dir
@@ -56,7 +60,7 @@ class BaselineVettingRunner:
         self,
         submission: CandidateSubmission,
         spec: ScenarioSpec
-    ) -> Tuple[SeniorVettingDossier, TraceLogger]:
+    ) -> tuple[SeniorVettingDossier, TraceLogger]:
         """Evaluates the submission using a real LLM call with top-tier prompt engineering."""
         run_id = str(uuid.uuid4())[:8]
         logger = TraceLogger(
@@ -157,6 +161,7 @@ class BaselineVettingRunner:
             code_quality_reusability_score=score,
             executive_summary=res.content,
             trade_off_analysis="Baseline prompt-engineered review with Chain-of-Thought (without dynamic load execution).",
+            evaluator_mode="baseline",
             evidence_citations=[],
             primary_flaws_flagged=[]
         )

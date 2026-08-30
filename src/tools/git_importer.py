@@ -1,13 +1,18 @@
 """Git Repository Importer for Live Web Code Review (Take-Home Full Repo & Polyglot AST)."""
 
+import ast
 import os
 import re
-import ast
-import tempfile
 import subprocess
-from typing import Tuple, Dict, List, Optional
-from src.core.domain import ScenarioSpec, CandidateSubmission, FileChange, NonFunctionalRequirements, ArchitectureType
+import tempfile
 
+from src.core.domain import (
+    ArchitectureType,
+    CandidateSubmission,
+    FileChange,
+    NonFunctionalRequirements,
+    ScenarioSpec,
+)
 
 CODE_EXTENSIONS = {
     ".py": "Python",
@@ -33,7 +38,7 @@ class GitRepoImporter:
         self.target_commit = target_commit
         self.mode = mode  # "full_repo" (Take-Home assignment) or "diff" (Incremental PR)
 
-    def run_cmd(self, cmd: List[str], cwd: str) -> str:
+    def run_cmd(self, cmd: list[str], cwd: str) -> str:
         """Run a shell command and return stdout."""
         result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, check=True)
         return result.stdout.strip()
@@ -76,7 +81,7 @@ class GitRepoImporter:
             summary += f" Exports: {', '.join(exports[:4])}."
         return summary
 
-    def build_ast_map(self, repo_path: str) -> Dict[str, str]:
+    def build_ast_map(self, repo_path: str) -> dict[str, str]:
         """Scans the repository and builds a structural AST/Symbol map across languages."""
         codebase_map = {}
         for root, _, files in os.walk(repo_path):
@@ -98,7 +103,7 @@ class GitRepoImporter:
                         codebase_map[rel_path] = f"Source File `{rel_path}` (Raw Inspection)."
         return codebase_map
 
-    def extract_full_codebase(self, repo_path: str) -> Tuple[str, List[FileChange], List[str]]:
+    def extract_full_codebase(self, repo_path: str) -> tuple[str, list[FileChange], list[str]]:
         """Extracts the entire codebase across all files for Take-Home project assessment."""
         file_changes = []
         diff_blocks = []
@@ -134,7 +139,7 @@ class GitRepoImporter:
         commit_messages = [f"Take-Home Project Assessment: Full Repository Ingestion ({len(file_changes)} files)"]
         return full_diff, file_changes, commit_messages
 
-    def extract_diff(self, repo_path: str) -> Tuple[str, List[FileChange], List[str]]:
+    def extract_diff(self, repo_path: str) -> tuple[str, list[FileChange], list[str]]:
         """Extracts the diff for the target commit (Incremental mode)."""
         try:
             self.run_cmd(["git", "fetch", "--depth=5"], cwd=repo_path)
@@ -172,7 +177,7 @@ class GitRepoImporter:
 
         return full_diff, file_changes, [commit_msg]
 
-    def ingest(self) -> Tuple[ScenarioSpec, CandidateSubmission]:
+    def ingest(self) -> tuple[ScenarioSpec, CandidateSubmission]:
         """Main ingestion entrypoint. Supports full take-home project or incremental diff."""
         repo_name = self.repo_url.rstrip("/").split("/")[-1].replace(".git", "")
 

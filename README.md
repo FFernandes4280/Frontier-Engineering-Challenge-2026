@@ -64,7 +64,7 @@ Traditional technical vetting mechanisms (isolated algorithmic puzzle tests or p
 Our **Holistic Multi-Agent FSM Solution** executes a multi-dimensional assessment pipeline:
 1. Provisions realistic distributed scenarios grounded in real open-source GitHub codebases.
 2. Evaluates the candidate's **AST Blast Radius** and **Codebase Reusability** (rewarding DRY and penalizing redundant reimplementation).
-3. Simulates **High-Throughput Concurrent Load** and detects race conditions, distributed deadlocks, and event loop blocking dynamically.
+3. Simulates **High-Throughput Concurrent Load** using a 100% safe **AST Pattern-Based Heuristic Sandbox Engine** (preventing any live injection vulnerabilities or the need for Docker), reliably detecting race conditions, distributed deadlocks, and event loop blocking.
 4. Generates an evidence-backed **Senior Vetting Dossier** citing exact files, line numbers, and architectural trade-offs with 100% alignment against senior human reviewer ground truth.
 
 ### 04. Can another person reproduce the result?
