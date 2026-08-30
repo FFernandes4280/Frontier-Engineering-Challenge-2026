@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class TraceStep(BaseModel):
     """Single step / event in an agent execution trajectory."""
     step_id: int
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     event_type: str  # SYSTEM_PROMPT, USER_INPUT, LLM_CALL, TOOL_CALL, TOOL_RESPONSE, STATE_CHANGE, VERIFICATION
     agent_name: str
     state: str | None = None
@@ -28,7 +28,7 @@ class TrajectoryLog(BaseModel):
     run_id: str
     runner_type: str  # baseline or advanced
     task_id: str
-    start_time: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    start_time: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     end_time: str | None = None
     success: bool = False
     total_tokens: int = 0
@@ -92,7 +92,7 @@ class TraceLogger:
 
     def finalize(self, success: bool) -> None:
         """Finalize the run, write full JSON and generate Markdown summary."""
-        self.trajectory.end_time = datetime.utcnow().isoformat()
+        self.trajectory.end_time = datetime.now(timezone.utc).isoformat()
         self.trajectory.success = success
 
         # Write formatted JSON

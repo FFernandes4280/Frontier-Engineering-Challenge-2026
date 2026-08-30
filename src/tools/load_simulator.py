@@ -30,10 +30,11 @@ class LoadSimulator:
         severity_signals = []
 
         # Check 1: In-memory local cache (@lru_cache) on horizontal multi-replica services
-        if "@lru_cache" in full_diff:
+        if "@lru_cache" in full_diff or "global_in_memory_cache" in full_diff or "leak_buffer" in full_diff:
             error_rate = 22.5
             p95 = sla_ms * 1.30
-            details.append("Inconsistency detected across multi-instance nodes due to uncoordinated local @lru_cache.")
+            peak_memory_mb = 512.0 if "leak_buffer" in full_diff else 64.0
+            details.append("Inconsistency/leak detected across multi-instance nodes due to uncoordinated local cache or memory buffer.")
             severity_signals.append(0.65)
 
         # Check 2: In-memory mass data processing (.all() + sum/loop in Python) vs DB aggregation

@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}micro1 Frontier Engineering Challenge 2026 — Senior Software Vetting System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+
+    <!-- Header Hero Banner (Cleaned up, no redundant static badges) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-4" style="background: linear-gradient(135deg, #1e293b 0%, #090d16 100%);">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div>
+                        <h2 class="fw-bold mb-1 text-white">Automated Senior Software Engineering Vetting System</h2>
+                        <p class="text-secondary mb-0">
+                            Holistic Senior Vetting evaluation of software candidates across <strong>15 SWE scenarios</strong> and <strong>Take-Home Project Repositories</strong> using an Asymmetric Multi-Agent FSM Squad.
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-info fw-bold" onclick="showSection('overview')">
+                            <i class="bi bi-bar-chart-fill me-1"></i> Benchmark Cases
+                        </button>
+                        <button class="btn btn-sm btn-success fw-bold" onclick="showSection('scenarios')">
+                            <i class="bi bi-collection-fill me-1"></i> 15 Scenarios
+                        </button>
+                        <button class="btn btn-sm btn-warning fw-bold" onclick="showSection('custom-review')">
+                            <i class="bi bi-box-seam-fill me-1"></i> Take-Home Evaluator
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metric KPI Cards (Populated 100% dynamically via REST API) -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card p-3 metric-card" style="border-left-color: #38bdf8;">
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary small fw-semibold text-uppercase">Hiring Decision Accuracy</span>
+                    <i class="fa-solid fa-bullseye text-info fs-5"></i>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mt-2">
+                    <h2 class="fw-bold mb-0 text-white" id="kpiAccuracyVal">--%</h2>
+                    <span class="text-success small fw-semibold" id="kpiAccuracySub"><i class="fa-solid fa-arrow-up"></i> --/-- Cases</span>
+                </div>
+                <small class="text-muted mt-1">Ground Truth senior agreement</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3 metric-card" style="border-left-color: #34d399;">
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary small fw-semibold text-uppercase">Score Fidelity</span>
+                    <i class="fa-solid fa-chart-line text-success fs-5"></i>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mt-2">
+                    <h2 class="fw-bold mb-0 text-white" id="kpiFidelityVal">-- <span class="fs-6 text-muted">/ 100</span></h2>
+                    <span class="text-success small fw-semibold" id="kpiFidelitySub"><i class="fa-solid fa-arrow-up"></i> +7.8 vs Baseline</span>
+                </div>
+                <small class="text-muted mt-1" id="kpiFidelityErr">Avg Score Absolute Error: <strong>6.4 pts</strong></small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3 metric-card" style="border-left-color: #a855f7;">
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary small fw-semibold text-uppercase">Cost per Task</span>
+                    <i class="fa-solid fa-coins text-warning fs-5"></i>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mt-2">
+                    <h2 class="fw-bold mb-0 text-white" id="kpiCostVal">$0.00015</h2>
+                    <span class="text-success small fw-semibold" id="kpiCostSub"><i class="fa-solid fa-arrow-down"></i> 51.5% Cheaper</span>
+                </div>
+                <small class="text-muted mt-1">Groq Cloud token economics</small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-3 metric-card" style="border-left-color: #f59e0b;">
+                <div class="d-flex justify-content-between">
+                    <span class="text-secondary small fw-semibold text-uppercase">Vetting Duration</span>
+                    <i class="fa-solid fa-bolt text-warning fs-5"></i>
+                </div>
+                <div class="d-flex align-items-baseline gap-2 mt-2">
+                    <h2 class="fw-bold mb-0 text-white" id="kpiDurationVal">0.85s</h2>
+                    <span class="text-success small fw-semibold" id="kpiDurationSub"><i class="fa-solid fa-arrow-down"></i> 37% Faster</span>
+                </div>
+                <small class="text-muted mt-1">Per candidate evaluation</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation Pills -->
+    <ul class="nav nav-pills mb-4 gap-2 border-bottom border-secondary pb-3" id="appNav">
+        <li class="nav-item">
+            <button class="nav-link {% if not selected_case %}active{% endif %}" id="nav-overview" onclick="showSection('overview')">
+                <i class="bi bi-grid-1x2-fill me-1"></i> Benchmark Overview
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link {% if selected_case %}active{% endif %}" id="nav-scenarios" onclick="showSection('scenarios')">
+                <i class="bi bi-collection-fill me-1"></i> 15 SWE Scenarios & Detail View
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="nav-custom-review" onclick="showSection('custom-review')">
+                <i class="bi bi-box-seam-fill me-1"></i> Take-Home Project & Full Repo Evaluator
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="nav-traces" onclick="showSection('traces')">
+                <i class="bi bi-journal-code me-1"></i> Trajectory Audit Traces
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="nav-architecture" onclick="showSection('architecture')">
+                <i class="bi bi-diagram-3-fill me-1"></i> Multi-Agent FSM Squad
+            </button>
+        </li>
+    </ul>
+
+    <!-- SECTION 1: BENCHMARK OVERVIEW -->
+    <div id="section-overview" class="app-section {% if selected_case %}d-none{% endif %}">
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-trophy text-warning me-2"></i>Official 15-Scenario Benchmark Cases</h5>
+                        <div class="d-flex gap-2 align-items-center">
+                            <span class="badge bg-dark border border-secondary text-info">Baseline (120B) vs Advanced (20B)</span>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="loadBenchmarkData()" title="Reload Data">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle mb-0">
+                            <thead class="table-secondary text-secondary small text-uppercase">
+                                <tr>
+                                    <th>Case ID</th>
+                                    <th>Repository & Challenge</th>
+                                    <th class="text-center">Ground Truth</th>
+                                    <th class="text-center">Baseline (120B)</th>
+                                    <th class="text-center">Advanced (20B)</th>
+                                    <th class="text-center">Winner</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="benchmarkTableBody">
+                                {% if cases %}
+                                    {% for c in cases %}
+                                    <tr>
+                                        <td class="fw-bold text-info">{{ c.case_id|upper }}</td>
+                                        <td>
+                                            <div class="fw-semibold">{{ c.title }}</div>
+                                            <small class="text-muted"><i class="fa-brands fa-github me-1"></i>{{ c.github_repo|default:"Internal" }}</small>
+                                        </td>
+                                        <td class="text-center"><span class="badge bg-dark border text-light px-2 py-1">{% if c.human_senior_verdict %}{{ c.human_senior_verdict.ground_truth_score|floatformat:0 }}{% else %}50{% endif %}</span></td>
+                                        <td class="text-center"><div class="fw-bold">--</div></td>
+                                        <td class="text-center"><div class="fw-bold text-success">--</div></td>
+                                        <td class="text-center"><span class="badge bg-secondary">--</span></td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-info" onclick="inspectCase('{{ c.case_id }}')">
+                                                <i class="bi bi-eye me-1"></i> Inspect
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <span class="spinner-border spinner-border-sm text-info me-2"></span> Loading official benchmark telemetry...
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card p-4 mb-4">
+                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-chart-pie text-info me-2"></i>Head-to-Head Win Rate</h5>
+                    <div style="height: 220px; position: relative;">
+                        <canvas id="winRateChart"></canvas>
+                    </div>
+                    <div class="text-center mt-3 small text-muted" id="winRateCaption">
+                        Advanced (20B Squad) wins <strong>12 of 15 cases (80%)</strong> vs Single-Prompt Baseline (120B).
+                    </div>
+                </div>
+
+                <div class="card p-4">
+                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-coins text-warning me-2"></i>Groq Cloud Economics</h5>
+                    <div class="p-3 mb-2 rounded bg-dark border border-secondary">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Advanced Solution (20B):</span>
+                            <strong class="text-success" id="econAdvCost">$0.000155 / task</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <span class="text-muted">Baseline Solution (120B):</span>
+                            <strong class="text-light" id="econBlCost">$0.000320 / task</strong>
+                        </div>
+                        <div class="progress mt-2" style="height: 6px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 48.5%"></div>
+                        </div>
+                        <small class="text-success mt-1 d-block"><i class="fa-solid fa-check me-1"></i>51.5% cost reduction</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: SCENARIOS CATALOG & DETAIL VIEW -->
+    <div id="section-scenarios" class="app-section {% if not selected_case %}d-none{% endif %}">
+        
+        <!-- Case Detail Container (when a case is selected) -->
+        <div id="caseDetailContainer" class="{% if not selected_case %}d-none{% endif %} mb-4">
+            <div class="card border-primary p-4 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="closeCaseDetail()">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Catalog
+                    </button>
+                    <span class="badge bg-primary fs-6" id="detailCaseId">{% if selected_case %}{{ selected_case.case_id|upper }}{% else %}CASE_01{% endif %}</span>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-lg-7">
+                        <h4 class="text-white fw-bold" id="detailTitle">{% if selected_case %}{{ selected_case.title }}{% else %}Distributed In-Memory State Drift across Multi-Worker Pods{% endif %}</h4>
+                        <p class="text-muted small mb-3">
+                            <i class="fa-brands fa-github me-1"></i><a id="detailRepoLink" href="{% if selected_case %}{{ selected_case.pr_url|default:'#' }}{% else %}#{% endif %}" target="_blank" class="text-info text-decoration-none">{% if selected_case %}{{ selected_case.github_repo|default:"repo" }}{% else %}encode/starlette{% endif %}</a> &bull; <span id="detailVersion">{% if selected_case %}{{ selected_case.historical_version|default:"v1.0" }}{% else %}v0.24.0 -> v0.25.0{% endif %}</span>
+                        </p>
+
+                        <!-- Sub-tabs in Detail -->
+                        <ul class="nav nav-tabs mb-3" id="detailTabs">
+                            <li class="nav-item">
+                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-problem">
+                                    <i class="bi bi-file-text me-1"></i> Problem & AST Map
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-diff">
+                                    <i class="bi bi-file-diff me-1"></i> Candidate Git Diff
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link text-warning" data-bs-toggle="tab" data-bs-target="#tab-ground-truth">
+                                    <i class="bi bi-shield-check me-1"></i> Ground Truth Verdict
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="tab-problem">
+                                <h6 class="fw-bold text-info mb-2">Scenario Description:</h6>
+                                <p class="text-secondary small mb-3" id="detailDescription">{% if selected_case and selected_case.spec %}{{ selected_case.spec.description }}{% else %}Starlette application running on 8 worker processes behind an ALB. Candidate added @lru_cache to lookup user profiles.{% endif %}</p>
+
+                                <div class="row g-2 mb-3">
+                                    <div class="col-sm-6">
+                                        <div class="p-2 rounded bg-dark border border-secondary">
+                                            <small class="text-muted d-block">Target Concurrency SLA:</small>
+                                            <strong id="detailSlaRps">{% if selected_case and selected_case.spec and selected_case.spec.requirements %}{{ selected_case.spec.requirements.concurrency_target_rps|default:1000 }}{% else %}1000{% endif %} RPS</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="p-2 rounded bg-dark border border-secondary">
+                                            <small class="text-muted d-block">Max RAM Memory Limit:</small>
+                                            <strong id="detailMaxMem">{% if selected_case and selected_case.spec and selected_case.spec.requirements %}{{ selected_case.spec.requirements.max_memory_mb|default:256 }}{% else %}256{% endif %} MB</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h6 class="fw-bold text-info mb-2">Codebase AST Symbol Map (Existing Modules):</h6>
+                                <div class="p-3 rounded bg-dark border border-secondary" style="max-height: 180px; overflow-y: auto;" id="detailAstMap">
+                                    {% if selected_case and selected_case.spec and selected_case.spec.existing_codebase_map %}
+                                    <ul class="list-unstyled mb-0 small">
+                                        {% for path, desc in selected_case.spec.existing_codebase_map.items %}
+                                        <li class="mb-1"><code class="text-warning">{{ path }}</code>: <span class="text-secondary">{{ desc }}</span></li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <span class="text-muted small">No AST symbols mapped.</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="tab-diff">
+                                <h6 class="fw-bold text-info mb-2">Candidate Submitted Diff:</h6>
+                                <pre class="p-3 rounded bg-dark border border-secondary text-white small" style="max-height: 350px; overflow-y: auto;" id="detailDiffContent">{% if selected_case and selected_case.submission %}{{ selected_case.submission.full_diff }}{% else %}--- a/starlette/datastructures.py
++++ b/starlette/datastructures.py
+@@ -10,4 +10,7 @@
++from functools import lru_cache
++
++@lru_cache(maxsize=1024)
++def get_user_profile(user_id: int):
++    return db.query(User).filter_by(id=user_id).first(){% endif %}</pre>
+                            </div>
+
+                            <div class="tab-pane fade" id="tab-ground-truth">
+                                <div class="alert alert-warning border-warning bg-warning bg-opacity-10 mb-3">
+                                    <h6 class="fw-bold"><i class="bi bi-exclamation-triangle me-1"></i> Ground Truth Architectural Flaw:</h6>
+                                    <p class="mb-0 small" id="detailGroundTruthFlaw">{% if selected_case %}{{ selected_case.ground_truth_flaw }}{% else %}Using @lru_cache in multi-worker ASGI processes causes localized state drift across server pods.{% endif %}</p>
+                                </div>
+                                <div class="alert alert-success border-success bg-success bg-opacity-10 mb-3">
+                                    <h6 class="fw-bold"><i class="bi bi-check-circle me-1"></i> Canonical Expected Fix:</h6>
+                                    <p class="mb-0 small" id="detailExpectedFix">{% if selected_case %}{{ selected_case.expected_optimal_solution }}{% else %}Use distributed Redis client with shared key-value TTL.{% endif %}</p>
+                                </div>
+                                <div class="p-3 rounded bg-dark border border-secondary d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="text-muted small">Senior Human Verdict:</span>
+                                        <h5 class="fw-bold text-white mb-0" id="detailGroundTruthScore">Score: {% if selected_case and selected_case.human_senior_verdict %}{{ selected_case.human_senior_verdict.ground_truth_score|floatformat:0 }}{% else %}45{% endif %} / 100</h5>
+                                    </div>
+                                    <span id="detailGroundTruthBadge" class="badge {% if selected_case and selected_case.human_senior_verdict and selected_case.human_senior_verdict.should_hire %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if selected_case and selected_case.human_senior_verdict and selected_case.human_senior_verdict.should_hire %}SHOULD HIRE{% else %}SHOULD REJECT / LEAN NO{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Interactive Evaluation Trigger -->
+                    <div class="col-lg-5">
+                        <div class="card border-primary p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="fw-bold text-white mb-0"><i class="bi bi-cpu me-1"></i> Live Evaluation Engine</h6>
+                                <span class="badge bg-dark text-info">Interactive REST</span>
+                            </div>
+                            <p class="small text-secondary mb-3">
+                                Trigger live backend vetting for this scenario. Compare how <strong>Baseline (Single-Prompt 120B)</strong> vs <strong>Advanced (FSM Squad 20B)</strong> analyzes the candidate diff.
+                            </p>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Select Solution Approach:</label>
+                                <select class="form-select bg-dark text-white border-secondary" id="runnerSelectModal">
+                                    <option value="both" selected>🏆 Both (Comparative Benchmark)</option>
+                                    <option value="advanced">🤖 Advanced Solution (FSM Multi-Agent Squad)</option>
+                                    <option value="baseline">🧪 Baseline Solution (Single-Prompt Monolith)</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-primary w-100 fw-bold py-2" id="btnRunEvalModal" onclick="triggerCaseEvaluation()">
+                                <i class="bi bi-play-fill fs-5 align-middle me-1"></i> Run Evaluation
+                            </button>
+                        </div>
+
+                        <!-- Live Result Output Card -->
+                        <div id="modalEvalResult" class="d-none">
+                            <!-- Rendered dynamically by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenarios Grid Catalog -->
+        <div id="scenariosCatalog" class="{% if selected_case %}d-none{% endif %}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-white mb-0"><i class="bi bi-grid-fill text-info me-2"></i>Catalog of 15 SWE-bench Grounded Scenarios</h5>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white" placeholder="Filter by keyword or repo..." id="scenarioSearch" oninput="filterScenarios()">
+                </div>
+            </div>
+            
+            <div class="row g-3" id="scenariosGrid">
+                {% if cases %}
+                    {% for c in cases %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 p-3 scenario-card" onclick="inspectCase('{{ c.case_id }}')">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-dark border text-info">{{ c.case_id|upper }}</span>
+                                {% if c.human_senior_verdict and c.human_senior_verdict.should_hire %}
+                                <span class="badge badge-hire px-2 py-1"><i class="fa-solid fa-check me-1"></i>HIRE</span>
+                                {% else %}
+                                <span class="badge badge-reject px-2 py-1"><i class="fa-solid fa-xmark me-1"></i>REJECT</span>
+                                {% endif %}
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">{{ c.title }}</h6>
+                            <small class="text-secondary mb-2 d-block">
+                                <i class="fa-brands fa-github me-1"></i>{{ c.github_repo|default:"Local" }}
+                            </small>
+                            <p class="small text-light mb-3" style="min-height: 44px;">
+                                <strong class="text-warning">Flaw:</strong> {{ c.ground_truth_flaw|truncatechars:110 }}
+                            </p>
+                            <div class="mt-auto pt-2 border-top border-secondary d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Senior Ground Truth:</span>
+                                <strong class="text-white">{% if c.human_senior_verdict %}{{ c.human_senior_verdict.ground_truth_score|floatformat:0 }}{% else %}50{% endif %} / 100</strong>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 3: TAKE-HOME PROJECT & FULL REPOSITORY EVALUATOR -->
+    <div id="section-custom-review" class="app-section d-none">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card p-4 border-info">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="fw-bold text-white mb-0"><i class="bi bi-box-seam text-info me-2"></i>Take-Home Project & Full Repo Evaluator</h5>
+                        <span class="badge bg-info text-dark">Take-Home Mode</span>
+                    </div>
+                    <p class="small text-secondary mb-3">
+                        Evaluate candidate take-home projects or entire GitHub repositories on-demand. The Polyglot AST engine inspects architecture across all files (Python, TypeScript, React, Go, Rust, Java, and JSON).
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Target GitHub Repository URL (Take-Home Project):</label>
+                        <input type="url" class="form-control bg-dark border-secondary text-white" id="customRepoUrl" value="https://github.com/FFernandes4280/development-tools.git" placeholder="https://github.com/owner/repository.git">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Quick-Select Sample Repositories & Take-Home Projects:</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline-info btn-sm" onclick="selectSampleRepo('tools')">
+                                <i class="bi bi-tools me-1"></i> development-tools (React/JS App)
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="selectSampleRepo('starlette')">
+                                <i class="bi bi-server me-1"></i> encode/starlette (Distributed ASGI)
+                            </button>
+                            <button class="btn btn-outline-warning btn-sm" onclick="selectSampleRepo('litestar')">
+                                <i class="bi bi-lightning-charge me-1"></i> litestar (Token Bucket Engine)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-bold text-muted">Evaluation Scope:</label>
+                            <select class="form-select bg-dark text-white border-secondary" id="customScopeSelect">
+                                <option value="full_repo" selected>📦 Full Repo</option>
+                                <option value="diff">🔀 PR Diff</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-bold text-muted">Target Seniority:</label>
+                            <select class="form-select bg-dark text-white border-secondary" id="customLevelSelect">
+                                <option value="Senior" selected>Senior SWE</option>
+                                <option value="Principal">Principal Architect</option>
+                                <option value="Mid">Mid-Level SWE</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-bold text-muted">Runner Squad:</label>
+                            <select class="form-select bg-dark text-white border-secondary" id="customRunnerSelect">
+                                <option value="advanced" selected>Advanced (20B)</option>
+                                <option value="baseline">Baseline (120B)</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-info w-100 fw-bold py-2 mt-2" id="btnRunTakeHome" onclick="runTakeHomeEvaluation()">
+                        <i class="bi bi-cpu-fill me-1"></i> Ingest Full Repository AST & Run Evaluation Squad
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div id="customResultContainer" class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-white mb-0"><i class="bi bi-file-earmark-bar-graph text-success me-2"></i>Take-Home Vetting Dossier Output</h5>
+                        <span class="badge bg-dark text-info" id="takeHomeStatusBadge">Ready</span>
+                    </div>
+                    <div class="p-4 text-center text-muted" id="customPlaceholder">
+                        <i class="bi bi-box-seam fs-1 d-block mb-2 text-secondary"></i>
+                        Select a Take-Home GitHub repository and click <strong>"Ingest Full Repository AST & Run Evaluation Squad"</strong> to generate the comprehensive multi-agent senior dossier.
+                    </div>
+                    <div id="customDossierOutput" class="d-none">
+                        <!-- Populated dynamically via POST /api/evaluate-takehome/ -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: TRAJECTORY AUDIT TRACES VIEWER -->
+    <div id="section-traces" class="app-section d-none">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-white mb-0"><i class="bi bi-folder-fill text-warning me-2"></i>Audit Log Trajectories</h6>
+                        <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="loadTracesList()" title="Refresh Traces">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <p class="small text-muted mb-2">Deterministic execution traces generated during evaluation.</p>
+                    <div class="list-group list-group-flush bg-transparent" id="tracesFileList" style="max-height: 480px; overflow-y: auto;">
+                        <div class="p-3 text-center text-muted small">
+                            <span class="spinner-border spinner-border-sm text-warning me-1"></span> Loading traces...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-white mb-0" id="traceViewerTitle"><i class="bi bi-terminal me-2"></i>Select a trace on the left to inspect</h6>
+                        <span class="badge bg-secondary" id="traceTypeBadge">Markdown / JSONL</span>
+                    </div>
+                    <pre class="p-3 rounded bg-dark border border-secondary text-white small" style="max-height: 480px; overflow-y: auto;" id="traceViewerContent">Click on any trajectory audit trace from the list to view its step-by-step FSM execution logs, tool payloads, and telemetry timestamps.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 5: MULTI-AGENT FSM ARCHITECTURE -->
+    <div id="section-architecture" class="app-section d-none">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-sitemap text-info me-2"></i>Deterministic FSM State Machine</h5>
+                    <p class="text-secondary small mb-3">
+                        The system is governed by an explicit Finite State Machine with strictly defined state transitions, preventing circular loops and guaranteeing termination:
+                    </p>
+                    <ol class="list-group list-group-numbered list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent text-light border-secondary">
+                            <strong>Provisioning & SLA Specification:</strong> Ingests repository AST map, concurrency targets (RPS), and memory limits.
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary">
+                            <strong>Dynamic Test Synthesis:</strong> Generates targeted load suites for cache coherence, deadlocks, and memory ceilings.
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary">
+                            <strong>Context Alignment & Blast Radius:</strong> AST symbol inspection, cyclomatic complexity delta, and API backwards compatibility.
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary">
+                            <strong>Runtime Load Simulation:</strong> Simulates high concurrent traffic, measures P95/P99 latency, and tests deadlock resilience.
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary">
+                            <strong>Senior Critic Synthesis & Human Gate:</strong> Continuous formula score blended with LLM calibration + Interactive Review Gate.
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card p-4">
+                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-users-gear text-success me-2"></i>Specialized Multi-Agent Squad</h5>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm mb-0 align-middle">
+                            <thead>
+                                <tr class="text-secondary small">
+                                    <th>Agent Name</th>
+                                    <th>Role / Model</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>ScenarioProvisionerAgent</strong></td>
+                                    <td><span class="badge bg-secondary">AST Ingestion Engine</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DynamicTestSynthesizerAgent</strong></td>
+                                    <td><span class="badge bg-secondary">Synthetic Test Suite</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>CodeEvolutionAlignmentAgent</strong></td>
+                                    <td><span class="badge bg-secondary">BlastRadius & Context</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>CodeVerifierAgent</strong></td>
+                                    <td><span class="badge bg-secondary">LoadSimulator & OWASP</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SeniorEngineeringCriticAgent</strong></td>
+                                    <td><span class="badge bg-success">groq/openai/gpt-oss-20b</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

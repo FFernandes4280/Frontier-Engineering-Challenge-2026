@@ -1,6 +1,6 @@
 """State definitions and models for the Agent FSM."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -25,7 +25,7 @@ class StateTransition(BaseModel):
     from_state: AgentStatus
     to_state: AgentStatus
     trigger: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     details: dict[str, Any] | None = None
 
 

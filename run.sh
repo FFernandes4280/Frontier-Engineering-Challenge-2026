@@ -128,9 +128,9 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         7)
-            echo -e "${CYAN}🚀 Starting Static Web Dashboard on http://127.0.0.1:8000...${NC}"
+            echo -e "${CYAN}🚀 Starting Django Web Dashboard on http://127.0.0.1:8000...${NC}"
             echo -e "${YELLOW}Press [Ctrl+C] to stop the web server when done.${NC}\n"
-            python3 -m http.server 8000 --directory docs/
+            python3 manage.py runserver 127.0.0.1:8000
             ;;
         8)
             echo -e "${YELLOW}Cleaning cache files and temporary traces...${NC}"

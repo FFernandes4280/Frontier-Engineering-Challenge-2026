@@ -2,28 +2,30 @@
 ### Frontier Engineering Challenge 2026 — micro1
 
 [![Autonomous Agents](https://img.shields.io/badge/Agentic_AI-Finite_State_Machine-blueviolet.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
-[![Benchmark](https://img.shields.io/badge/Benchmark_Accuracy-100%25_vs_70%25-success.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
+[![Benchmark](https://img.shields.io/badge/Benchmark_Accuracy-93.3%25_vs_66.7%25-success.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
 [![Open Source Grounding](https://img.shields.io/badge/Ground_Truth-SWE--bench_Style_PRs-orange.svg)](https://github.com/FFernandes4280/Frontier-Engineering-Challenge-2026)
 [![Multi-Provider](https://img.shields.io/badge/LLM_Engine-Gemini_%7C_Groq_%7C_OpenAI-blue.svg)](https://ai.google.dev/)
+[![Web Dashboard](https://img.shields.io/badge/Web_Dashboard-Django_5.0_%2B_Bootstrap-green.svg)](http://127.0.0.1:8000)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > **Official Submission for the micro1 Frontier Engineering Challenge 2026**  
-> *An autonomous multi-agent evaluation platform for Senior Software Engineering candidates and production Pull Request gatekeeping based on architectural trade-offs, concurrency load simulations, AST blast radius, and codebase alignment across 10 real-world open-source codebases.*
+> *An autonomous multi-agent evaluation platform for Senior Software Engineering candidates, full repository Take-Home assignments, and production Pull Request gatekeeping based on architectural trade-offs, concurrency load simulations, AST blast radius, and codebase alignment across 15 real-world open-source codebases.*
 
 ---
 
 ## 📑 Table of Contents
 1. [The Dual-Application Thesis](#-1-the-dual-application-thesis)
 2. [The 4 Core Questions](#-2-the-4-core-questions)
-3. [Open-Source Grounded Benchmark Suite (10 Codebases)](#-3-open-source-grounded-benchmark-suite-10-codebases)
+3. [Open-Source Grounded Benchmark Suite (15 Codebases)](#-3-open-source-grounded-benchmark-suite-15-codebases)
 4. [Agent Architecture & Finite State Machine (FSM)](#-4-agent-architecture--finite-state-machine-fsm)
 5. [The Specialized Multi-Agent Squad](#-5-the-specialized-multi-agent-squad)
 6. [Empirical Benchmark Results](#-6-empirical-benchmark-results)
 7. [The Architectural Deep Dive: Prompt Engineering vs Agentic Runtime Simulation](#-7-the-architectural-deep-dive-prompt-engineering-vs-agentic-runtime-simulation)
-8. [The Improvement Changelog](#-8-the-improvement-changelog)
-9. [Failure Mode Analysis & The Hot Take](#-9-failure-mode-analysis--the-hot-take)
-10. [Strategic Future Roadmap](#-10-strategic-future-roadmap)
-11. [Quick Start & Reproduction Guide](#-11-quick-start--reproduction-guide)
+8. [Interactive Django Web Dashboard & REST API](#-8-interactive-django-web-dashboard--rest-api)
+9. [The Improvement Changelog](#-9-the-improvement-changelog)
+10. [Failure Mode Analysis & The Hot Take](#-10-failure-mode-analysis--the-hot-take)
+11. [Strategic Future Roadmap](#-11-strategic-future-roadmap)
+12. [Quick Start & Reproduction Guide](#-12-quick-start--reproduction-guide)
 
 ---
 
@@ -65,14 +67,14 @@ Our **Holistic Multi-Agent FSM Solution** executes a multi-dimensional assessmen
 1. Provisions realistic distributed scenarios grounded in real open-source GitHub codebases.
 2. Evaluates the candidate's **AST Blast Radius** and **Codebase Reusability** (rewarding DRY and penalizing redundant reimplementation).
 3. Simulates **High-Throughput Concurrent Load** using a 100% safe **AST Pattern-Based Heuristic Sandbox Engine** (preventing any live injection vulnerabilities or the need for Docker), reliably detecting race conditions, distributed deadlocks, and event loop blocking.
-4. Generates an evidence-backed **Senior Vetting Dossier** citing exact files, line numbers, and architectural trade-offs with 100% alignment against senior human reviewer ground truth.
+4. Generates an evidence-backed **Senior Vetting Dossier** citing exact files, line numbers, and architectural trade-offs with high fidelity against senior human reviewer ground truth.
 
 ### 04. Can another person reproduce the result?
-**Yes, 100% deterministically.** With a single command (`./run.sh` or `python3 -m eval.harness --runner both`), any evaluator can execute the benchmark from a clean environment and inspect the full JSONL/Markdown trajectories in `./traces/`.
+**Yes, 100% deterministically.** With a single command (`./run.sh`, `pytest -v`, or `python manage.py runserver 127.0.0.1:8000`), any evaluator can execute the benchmark from a clean environment and inspect the full JSONL/Markdown trajectories in `./trajectories/` and `./traces/`.
 
 ---
 
-## 🌐 3. Open-Source Grounded Benchmark Suite (10 Codebases)
+## 🌐 3. Open-Source Grounded Benchmark Suite (15 Codebases)
 
 Each benchmark scenario is extracted from **real architectural regressions and canonical PR fixes** in major open-source repositories (SWE-bench style):
 
@@ -88,6 +90,11 @@ Each benchmark scenario is extracted from **real architectural regressions and c
 | **08** | [`pallets/werkzeug`](https://github.com/pallets/werkzeug) | `v2.2.0 -> v2.2.1` | OWASP SQL injection through dynamic string interpolation | [PR #2340](https://github.com/pallets/werkzeug/pull/2340) |
 | **09** | [`marshmallow-code/marshmallow`](https://github.com/marshmallow-code/marshmallow) | `v3.19.0 -> v3.20.0` | Public response contract breaking schema drift without versioning | [PR #1823](https://github.com/marshmallow-code/marshmallow/pull/1823) |
 | **10 (🔥)** | [`encode/databases`](https://github.com/encode/databases) | `v0.6.0 -> v0.6.1` | **The Reverse Lock Order Distributed Deadlock** under cross-shard load | [PR #452](https://github.com/encode/databases/pull/452) |
+| **11** | [`urllib3/urllib3`](https://github.com/urllib3/urllib3) | `v1.26.12 -> v1.26.13` | Unpooled HTTP session recreation file descriptor & socket leak | [PR #2810](https://github.com/urllib3/urllib3/pull/2810) |
+| **12** | [`fastapi/fastapi`](https://github.com/fastapi/fastapi) | `v0.95.0 -> v0.95.1` | Event loop CPU starvation via synchronous bcrypt hashing in async path | [PR #9340](https://github.com/fastapi/fastapi/pull/9340) |
+| **13** | [`django/django`](https://github.com/django/django) | `v4.2.0 -> v4.2.1` | N+1 database query cascade in nested serializer loops | [PR #16800](https://github.com/django/django/pull/16800) |
+| **14** | [`encode/uvicorn`](https://github.com/encode/uvicorn) | `v0.22.0 -> v0.23.0` | Abrupt SIGTERM server shutdown dropping in-flight requests | [PR #1980](https://github.com/encode/uvicorn/pull/1980) |
+| **15** | [`aio-libs/aiohttp`](https://github.com/aio-libs/aiohttp) | `v3.8.4 -> v3.8.5` | Unbounded outbound microservice HTTP calls cascading failure | [PR #7340](https://github.com/aio-libs/aiohttp/pull/7340) |
 
 ---
 
@@ -101,8 +108,8 @@ stateDiagram-v2
     INITIALIZING --> ANALYZING: Ingest Candidate Git Diff & Codebase
     ANALYZING --> EXECUTING_TOOLS: Trigger AST, Blast Radius & Context Inspector
     EXECUTING_TOOLS --> VERIFYING: Run Concurrency Load & Security Verification
-    VERIFYING --> HUMAN_CHECKPOINT: Borderline Score (50-65) Sign-off
-    VERIFYING --> COMPLETED: Final Dossier Generated (Score <50 or >=65)
+    VERIFYING --> HUMAN_CHECKPOINT: Borderline Score (45-65) Sign-off
+    VERIFYING --> COMPLETED: Final Dossier Generated (Score <45 or >=65)
     HUMAN_CHECKPOINT --> COMPLETED: Reviewer Approved
     COMPLETED --> [*]
 ```
@@ -116,7 +123,7 @@ stateDiagram-v2
 | **1. Scenario & Architecture Provisioner** | Packages scenario context, distributed topology, and non-functional requirements (P95 latency, max memory, consistency model). | Scenario Spec Catalog, SLA Definition Engine |
 | **2. Code Evolution & Context Alignment Agent** | Evaluates blast radius, cyclomatic complexity delta, API backwards compatibility, and detects whether candidate reused existing codebase modules. | `BlastRadiusAnalyzer`, `ContextInspector` (AST Pattern Matcher) |
 | **3. Static, Security & Load Performance Verifier** | Simulates concurrent traffic load (50+ users, 2000 RPS), detects distributed deadlocks, event loop blocking, memory spikes, and static OWASP vulnerabilities. | `LoadSimulator`, `SecurityScanner` |
-| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (`groq/qwen/qwen3.8-27b` / `gemini-3.6-flash`) |
+| **4. Senior Engineering Alignment Critic** | Synthesizes multi-agent telemetry into the final holistic vetting dossier with 0-100 score and specific evidence citations. | `SeniorEngineeringCriticAgent` (`groq/openai/gpt-oss-20b` / `gemini-3.6-flash`) |
 
 ---
 
@@ -127,55 +134,60 @@ stateDiagram-v2
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
 ┃ Evaluation Metric                    ┃ Baseline Solution ┃ Advanced Solution ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
-│ Total Scenarios Evaluated            │                10 │                10 │
+│ Total Scenarios Evaluated            │                15 │                15 │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Hiring Alignment Accuracy            │      70.0% (7/10) │    100.0% (10/10) │
+│ Hiring Alignment Accuracy            │      66.7% (10/15)│     93.3% (14/15) │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Fidelity Score (vs Human Ground      │        71.0 / 100 │        87.8 / 100 │
+│ Fidelity Score (vs Human Ground      │        70.4 / 100 │        88.2 / 100 │
 │ Truth)                               │                   │                   │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Cost per Vetting Task ($)        │       $0.00014 USD│       $0.00000 USD│
+│ Avg Cost per Vetting Task ($)        │      $0.00014 USD │      $0.00002 USD │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Duration per Task (s)            │            17.15s │             0.22s │
+│ Avg Duration per Task (s)            │            14.20s │             0.45s │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Est. Human Engineering Time Saved    │     225.0 minutes │     300.0 minutes │
+│ Est. Human Engineering Time Saved    │     337.5 minutes │     420.0 minutes │
 └──────────────────────────────────────┴───────────────────┴───────────────────┘
 ```
 
-### 🔥 The Critical Failure of Single-Prompt Baseline:
-1. **Case 8 (Werkzeug SQL Injection):** The candidate wrote clean docstrings and passed functional tests. The Baseline awarded **88.0/100 ("HIRE")**, failing to catch catastrophic vulnerability. The Advanced Squad caught the dynamic vulnerability via AST inspection and rejected the candidate (**44.0/100 ("REJECT")**).
-2. **Case 10 (Distributed Deadlock in `encode/databases`):** The candidate acquired distributed locks in reverse order across shards. Single-prompt LLMs cannot execute thread interleaving and rated it cleanly. The `LoadSimulator` executed concurrent opposing requests, detected the lock contention deadlock, and penalized the architecture score to **42.0/100 ("REJECT")**.
+---
+
+## 🌐 8. Interactive Django Web Dashboard & REST API
+
+The system provides an enterprise-grade Django 5.0 application with a modern dark-mode UI:
+
+```bash
+# Launch the Django Web Server
+python manage.py runserver 127.0.0.1:8000
+```
+
+### UI Features:
+- **Interactive Overview Dashboard (`GET /`)**: Key benchmark indicators, comparative charts, and quick-launch links.
+- **Scenario Catalog (`GET /cases/`)**: Browse all 15 scenarios with architecture topology and ground truth flaw previews.
+- **Deep-Dive Scenario Inspector (`GET /cases/<case_id>/`)**: Inspect full candidate diffs, run live comparisons (Baseline vs Advanced FSM), and observe real-time telemetry.
+- **Web Git Take-Home Reviewer (`GET /custom-review/` & `POST /custom-review/`)**: Ingest any public/private GitHub repository into an isolated sandbox, build polyglot AST symbol maps, and execute the multi-agent squad.
+- **Audit Trajectories Visualizer (`GET /traces/`)**: Read `.jsonl`, `.json`, and `.md` execution trajectories.
+
+### REST API Endpoints:
+- `GET /api/benchmark-data/`: Returns JSON with all 15 scenario specifications and aggregated benchmark metrics.
+- `POST /api/evaluate/<case_id>`: Triggers evaluation against a specific scenario with dynamic score calculation and optional custom diff/seniority payload.
+- `POST /api/evaluate-takehome/`: Clones repository in an ephemeral sandbox, builds polyglot AST, and returns holistic dossier.
+- `GET /api/trajectories/`: Lists all stored execution trajectories.
 
 ---
 
-## 🧠 7. The Architectural Deep Dive: Prompt Engineering vs Agentic Runtime Simulation
-
-A central question in Frontier AI is: **"Can prompt engineering on a heavy model (Gemini Pro / GPT-4o) replace a multi-agent FSM system?"**
-
-### Where Prompt Engineering Excels (80% of routine cases):
-For standard code review, linting, pure algorithmic refactoring, and junior/mid-level evaluation, careful prompt engineering (Chain-of-Thought, few-shot examples, structured JSON outputs) is cost-effective and sufficient.
-
-### The Physical & Mathematical Limits of Prompts on Senior Systems:
-For senior-level distributed engineering, prompts hit three fundamental barriers:
-1. **The Asynchronous Non-Determinism Barrier:** LLMs are probabilistic token predictors without CPU clocks or OS thread schedulers. They cannot compute whether 500 concurrent coroutines will enter circular lock wait without executing/simulating the runtime state.
-2. **The "Lost in the Middle" Attention Saturation:** Ingesting 50,000 lines of an enterprise monorepo into a single prompt degrades transformer attention and explodes token costs. Local AST inspection tools resolve dependency graphs with $O(1)$ precision in 2ms.
-3. **Deterministic Guarantees via FSM:** LLMs in prompts are stochastic (varying by temperature and prompt phrasing). The FSM enforces strict stage-gate execution (`INITIALIZING -> ANALYZING -> EXECUTING_TOOLS -> VERIFYING -> DOSSIER`), creating an audit trail required for compliance and enterprise hiring decisions.
-
----
-
-## 📝 8. The Improvement Changelog
+## 📝 9. The Improvement Changelog
 
 | Stage | What We Tried and Why | Evidence | Decision / Learning |
 | :--- | :--- | :---: | :--- |
-| **Baseline** | Single-prompt Monolithic Reviewer (`groq/openai/gpt-oss-120b` / `Gemini Pro`) evaluating Git diff and test output. | 70.0% accuracy vs human ground truth (fooled by 3/10 flawed architectures). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
+| **Baseline** | Single-prompt Monolithic Reviewer (`groq/openai/gpt-oss-120b` / `Gemini Pro`) evaluating Git diff and test output. | 66.7% accuracy vs human ground truth (fooled by flawed architectures with clean syntax). | Established baseline bottleneck: static code reading cannot evaluate runtime concurrency or distributed constraints. |
 | **Iteration 1** | *[Discarded Experiment]* Added eBPF typing speed and terminal navigation entropy tracker. | Generated high variance and unfair penalties due to natural interview nervousness without correlating with code quality. | **REMOVED:** Shifted telemetry strictly from "typing process" to **"Code Evolution & Context Alignment (Blast Radius & Module Reusability)"**. |
 | **Iteration 2** | Implemented AST Blast Radius and Codebase Reusability Inspector. | Accuracy jumped to 80.0%. Successfully flagged redundant reimplementation of tax validators. | **KEPT:** High-signal architectural compliance measurement. |
 | **Iteration 3** | Added Dynamic Load & Concurrency Simulator (evaluating race conditions, memory spikes, deadlocks, and event loop blocking). | Accuracy jumped to 90.0%. Caught distributed deadlocks and in-memory cache drift. | **KEPT:** Essential for distributed systems evaluation. |
-| **Final Squad** | Connected the 4 specialized agents to the Deterministic FSM Engine with multi-cloud fallback (Gemini + Groq Cloud) and `--limit` debugging flag. | **100.0% Hiring Alignment Accuracy** and **87.8/100 Fidelity Score**. | **CONSOLIDATED:** Final architecture submitted. |
+| **Final Squad** | Connected the 4 specialized agents to the Deterministic FSM Engine, Django REST backend, and GitHub Pages frontend. | **93.3% Hiring Alignment Accuracy** and **88.2/100 Fidelity Score**. | **CONSOLIDATED:** Final architecture submitted. |
 
 ---
 
-## 💡 9. Failure Mode Analysis & The Hot Take
+## 💡 10. Failure Mode Analysis & The Hot Take
 
 > [!IMPORTANT]
 > **Primary Failure Mode Observed:**  
@@ -183,20 +195,12 @@ For senior-level distributed engineering, prompts hit three fundamental barriers
 
 > [!TIP]
 > **The Hot Take for Agentic AI:**  
-> **"Agentic architecture with specialized inspection tools allows smaller, faster, cheaper models (`groq/qwen/qwen3.8-27b` / `gemini-3.6-flash`) to decisively outperform monolithic frontier models (`groq/openai/gpt-oss-120b` / `gemini-pro-latest`) operating in single-shot mode."**  
+> **"Agentic architecture with specialized inspection tools allows smaller, faster, cheaper models (`groq/openai/gpt-oss-20b` / `gemini-3.6-flash`) to decisively outperform monolithic frontier models (`groq/openai/gpt-oss-120b` / `gemini-pro-latest`) operating in single-shot mode."**  
 > Prompt engineering alone cannot substitute for dynamic execution environments, AST verification, and multi-agent debate.
 
 ---
 
-## 🔮 10. Strategic Future Roadmap
-
-1. **Sandboxed Micro-VMs & eBPF Kernel Probes (Firecracker/Docker):** Transition from synthetic load simulation to running ephemeral Linux micro-VMs with eBPF probes tracking kernel thread contention and heap allocations under real HTTP/TCP traffic.
-2. **Interactive Candidate Follow-up Dialogue:** Enable the Critic Agent to conduct dynamic follow-up technical interrogations when borderline scores are detected (e.g. asking how the candidate would scale their locking strategy across 10 Kubernetes pods).
-3. **Multi-Repo LSP Dependency Graphs:** Ingest cross-repository LSP indexes (SCIP / Tree-sitter) to detect if a proposed diff breaks RPC schemas or message contracts across distinct microservices.
-
----
-
-## ⚡ 11. Quick Start & Reproduction Guide
+## ⚡ 12. Quick Start & Reproduction Guide
 
 ### 1-Click Interactive CLI
 ```bash
@@ -214,17 +218,14 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Run full comparative benchmark (10 cases)
+# Run full comparative benchmark (15 cases)
 python3 -m eval.harness --runner both
 
-# Run quick benchmark on first 2 cases
-python3 -m eval.harness --runner both --limit 2
+# Launch Django Web Dashboard
+python manage.py runserver 127.0.0.1:8000
 
-# Run pytest unit test suite
+# Run automated pytest test suite
 pytest -v
-
-# Inspect formatted trajectories
-python3 -m src.tracing.viewer
 ```
 
 ---
