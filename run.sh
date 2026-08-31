@@ -88,7 +88,6 @@ ensure_environment() {
     if [ ! -f ".env" ] && [ -f ".env.example" ]; then
         echo -e "${YELLOW}[!] .env configuration file not found. Creating from .env.example...${NC}"
         cp .env.example .env
-        echo -e "${GREEN}[✓] Created .env file (Default: Groq / Gemini with offline deterministic fallback).${NC}"
         echo -e "${GREEN}[✓] Created .env file.${NC}"
     fi
 
@@ -523,19 +522,16 @@ while true; do
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
-        7)
         8)
             run_dashboard_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
-        8)
         9)
             reinstall_deps_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
-        9)
         10)
             clean_action
             echo ""
@@ -546,7 +542,6 @@ while true; do
             exit 0
             ;;
         *)
-            echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 9.${NC}"
             echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 10.${NC}"
             sleep 1
             ;;
