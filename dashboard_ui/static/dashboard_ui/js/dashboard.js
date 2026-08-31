@@ -160,7 +160,7 @@ function calculateKpis(cases, benchmark, existingKpis) {
     }
 
     // Ensure fallback to canonical metrics if dataset benchmark isn't completely filled
-    if (count < 20 || (advWins === 0 && blWins === 0)) {
+    if (advDetails.length < 20 || (advWins === 0 && blWins === 0)) {
         advWins = 20;
         blWins = 0;
         count = 20;
