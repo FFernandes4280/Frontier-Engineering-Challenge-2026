@@ -246,8 +246,10 @@ function renderBenchmarkTable(benchmark, cases) {
 
     for (let i = 0; i < count; i++) {
         const c = caseList[i] || {};
-        const bl = blDetails[i] || { details: {} };
-        const adv = advDetails[i] || { details: {} };
+        const cid = c.case_id || (advDetails[i] ? advDetails[i].case_id : null);
+        
+        const bl = blDetails.find(x => x.case_id === cid) || { details: {} };
+        const adv = advDetails.find(x => x.case_id === cid) || { details: {} };
 
         const caseId = c.case_id || bl.case_id || adv.case_id || `case_${i+1}`;
         const title = c.title || bl.details?.title || adv.details?.title || `Scenario ${caseId}`;
