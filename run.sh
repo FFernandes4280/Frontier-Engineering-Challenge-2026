@@ -104,11 +104,9 @@ ensure_environment() {
 check_and_prompt_api_key() {
     local current_key=""
     if [ -f ".env" ]; then
-        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
         current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "\r\n' || true)
     fi
 
-    if [ -z "$current_key" ] || [ "$current_key" = "your-groq-api-key-here" ] || [[ "$current_key" == *"your-groq"* ]]; then
     # Detect if key is missing, empty, or a placeholder (e.g. gsk_your_groq_api_key_here)
     if [ -z "$current_key" ] || \
        [[ "$current_key" == *"your"* ]] || \
