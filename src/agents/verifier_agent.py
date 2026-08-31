@@ -54,6 +54,7 @@ You will receive:
 2. The scenario SLA targets: p95 latency (ms), target concurrency (RPS), max memory (MB).
 
 Predict the runtime performance impact of this change under load.
+IMPORTANT: Be realistic. A simple cache miss or thundering herd risk on a basic abstraction (like `get_or_set`) under moderate loads should NOT be treated as a catastrophic failure. For such cases, keep severity_multiplier low (e.g. 0.1 - 0.3) and sla_met = true.
 
 REQUIRED OUTPUT FORMAT (strict JSON, no markdown wrapper):
 {

@@ -94,7 +94,8 @@ def run(
     dataset: str = typer.Option("eval/dataset/cases.json", "--dataset", "-d", help="Dataset path"),
     output: str = typer.Option("eval/benchmark_results.json", "--output", "-o", help="Output JSON path"),
     limit: Optional[int] = typer.Option(None, "--limit", "-l", help="Limit number of test cases to evaluate (e.g. 2)"),
-    case: Optional[int] = typer.Option(None, "--case", "-c", help="Evaluate a specific test case by number (1 to 10)"),
+    sample: Optional[int] = typer.Option(None, "--sample", "-s", help="Randomly sample N cases from dataset (e.g. 10)"),
+    case: Optional[int] = typer.Option(None, "--case", "-c", help="Evaluate a specific test case by number (1 to 20)"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Display full step-by-step trace of the execution"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Enable interactive Human-in-the-Loop decision gate")
 ):

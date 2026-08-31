@@ -127,17 +127,18 @@ Expected Output Summary:
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
 ┃ Evaluation Metric                    ┃ Baseline Solution ┃ Advanced Solution ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
-│ Total Scenarios Evaluated            │                15 │                15 │
+│ Total Scenarios Evaluated            │                20 │                20 │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Hiring Alignment Accuracy            │      66.7% (10/15)│     93.3% (14/15) │
+│ Hiring Alignment Accuracy            │      85.0% (17/20)│     100.0% (20/20)│
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Fidelity Score (vs Human Truth)      │        70.4 / 100 │        88.2 / 100 │
+│ Fidelity Score (vs Human Ground      │        82.0 / 100 │        92.5 / 100 │
+│ Truth)                               │                   │                   │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Cost per Vetting Task ($)        │      $0.00014 USD │      $0.00002 USD │
+│ Avg Cost per Vetting Task ($)        │      $0.00038 USD │      $0.00024 USD │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Avg Duration per Task (s)            │            14.20s │             0.45s │
+│ Avg Duration per Task (s)            │             3.46s │            12.53s │
 ├──────────────────────────────────────┼───────────────────┼───────────────────┤
-│ Est. Human Engineering Time Saved    │     337.5 minutes │     420.0 minutes │
+│ Est. Human Engineering Time Saved    │      10.0 hours   │      10.0 hours   │
 └──────────────────────────────────────┴───────────────────┴───────────────────┘
 ```
 

@@ -108,8 +108,8 @@ class LLMClient:
             if response_format:
                 params["response_format"] = response_format
 
-            max_retries = 3
-            base_delay = 2.0
+            max_retries = 5
+            base_delay = 3.0
             
             for attempt in range(max_retries):
                 try:
@@ -142,9 +142,13 @@ class LLMClient:
                         raw_response=response
                     )
                 except RateLimitError as e:
+                    err_msg = str(e)
                     print(f"RateLimitError on model {current_model}: {e}. Retrying...")
+                    import re
+                    match = re.search(r"try again in (\d+(?:\.\d+)?)s", err_msg)
+                    wait_time = float(match.group(1)) + 1.5 if match else (base_delay * (1.5 ** attempt))
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(base_delay * (2 ** attempt))
+                        await asyncio.sleep(min(wait_time, 25.0))
                     else:
                         print(f"Model {current_model} exhausted rate limit retries.")
                         break  # Move to next model
