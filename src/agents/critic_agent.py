@@ -101,11 +101,15 @@ class SeniorEngineeringCriticAgent:
         severity = load.severity_multiplier  # 0.0 = no issue, 1.0 = catastrophic
 
         # --- Architecture Score (continuous) ---
-        arch_score = 95.0 - (severity * 75.0 * severity_multiplier)
+        arch_score = 92.0 - (severity * 80.0 * severity_multiplier)
         
+        # Penalty for SLA violation
+        if not load.sla_met:
+            arch_score -= 20.0
+
         # Additional penalty for security vulnerabilities (e.g. SQLi)
         if not verification_report.static_analysis_clean:
-            arch_score -= 30.0
+            arch_score -= 35.0
         
         # Penalty for breaking public API contracts without versioning
         if not api_contract_preserved:
@@ -114,15 +118,18 @@ class SeniorEngineeringCriticAgent:
         arch_score = max(10.0, min(95.0, arch_score))
 
         # --- Concurrency/Scalability Score (continuous) ---
-        scalability_score = 92.0 - (severity * 67.0 * severity_multiplier)
+        scalability_score = 90.0 - (severity * 75.0 * severity_multiplier)
         
+        if not load.sla_met:
+            scalability_score -= 25.0
+
         # Penalty for broken API contracts on downstream clients
         if not api_contract_preserved:
             scalability_score -= 35.0
             
         # Extra penalty based on error rate magnitude
         if load.error_rate_pct > 0:
-            error_penalty = min(20.0, load.error_rate_pct * 0.5)
+            error_penalty = min(30.0, load.error_rate_pct * 0.7)
             scalability_score -= error_penalty
         
         scalability_score = max(10.0, min(92.0, scalability_score))
@@ -132,10 +139,17 @@ class SeniorEngineeringCriticAgent:
         code_quality_score = max(10.0, min(100.0, code_quality_score))
 
         # --- Weighted Overall ---
-        overall = round(
-            (arch_score * 0.40) + (scalability_score * 0.40) + (code_quality_score * 0.20),
-            1
-        )
+        # If architecture or scalability are compromised, code quality should not artificially mask severe flaws
+        if arch_score < 60.0 or scalability_score < 60.0 or severity >= 0.35 or not load.sla_met:
+            overall = round(
+                (arch_score * 0.45) + (scalability_score * 0.45) + (code_quality_score * 0.10),
+                1
+            )
+        else:
+            overall = round(
+                (arch_score * 0.40) + (scalability_score * 0.40) + (code_quality_score * 0.20),
+                1
+            )
         overall = max(0.0, min(100.0, overall))
 
         return {
@@ -382,17 +396,26 @@ class SeniorEngineeringCriticAgent:
         blended_score = max(0.0, min(100.0, blended_score))
         # ────────────────────────────────────────────────────────────────────
 
-        if llm_recommendation:
-            recommendation = llm_recommendation
+        # Coherent recommendation logic: Score >= 70 is HIRE threshold
+        if blended_score >= 85.0:
+            default_rec = RecommendationType.STRONG_HIRE
+        elif blended_score >= 70.0:
+            default_rec = RecommendationType.HIRE
+        elif blended_score >= 50.0:
+            default_rec = RecommendationType.LEAN_NO
         else:
-            if blended_score >= 85.0:
-                recommendation = RecommendationType.STRONG_HIRE
-            elif blended_score >= 65.0:
+            default_rec = RecommendationType.REJECT
+
+        if llm_recommendation:
+            # If LLM recommended HIRE but blended score failed the 70.0 threshold, align recommendation with score
+            if llm_recommendation in [RecommendationType.HIRE, RecommendationType.STRONG_HIRE] and blended_score < 70.0:
+                recommendation = RecommendationType.LEAN_NO if blended_score >= 50.0 else RecommendationType.REJECT
+            elif llm_recommendation in [RecommendationType.REJECT, RecommendationType.LEAN_NO] and blended_score >= 70.0:
                 recommendation = RecommendationType.HIRE
-            elif blended_score >= 50.0:
-                recommendation = RecommendationType.LEAN_NO
             else:
-                recommendation = RecommendationType.REJECT
+                recommendation = llm_recommendation
+        else:
+            recommendation = default_rec
 
         if not executive_summary:
             executive_summary = (
