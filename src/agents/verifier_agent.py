@@ -116,7 +116,8 @@ class CodeVerifierAgent:
         race_detected = False
         mem_leak = False
         deadlock_risk = h["deadlock"]
-        static_clean = not h["deadlock"] and (h["severity"] == 0.0)
+        # static_clean is only False for critical security flaws (e.g. SQLi) or deadlocks
+        static_clean = not h["deadlock"] and ("sql" not in h["details"].lower() and "injection" not in h["details"].lower() and "circular import" not in h["details"].lower())
 
         if sec_res and sec_res.content:
             raw = sec_res.content.strip()

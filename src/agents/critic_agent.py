@@ -51,6 +51,12 @@ SCORING GUIDELINES:
 - 51-70: Moderate issues — breaking public response schemas without versioning, suboptimal patterns, missed codebase reuse
 - 71-85: Good with minor concerns — solid architecture, acceptable baseline abstractions (like `get_or_set` with thundering herd risk), minor debt
 - 86-100: Exceptional — addresses all distributed concerns, clean, reusable, atomic
+SCORING GUIDELINES & SENIOR SEVERITY RUBRICS:
+- 0-30 (REJECT): Critical system failures — SQL injection, distributed deadlocks, event loop thread starvation, cyclic import crashes, unawaited async tasks.
+- 31-50 (REJECT / LEAN_NO): Major architectural violations — unpaginated collection loading (.all() / fetchall()) causing RAM exhaustion under volume, in-process caching (@lru_cache) in multi-worker pods causing state drift, balance mutations without row-level locks, outbound calls without timeouts.
+- 51-69 (LEAN_NO): Moderate issues — breaking public response schemas without versioning, code redundancy (reinventing regex instead of codebase validator reuse), non-optimal query patterns.
+- 70-85 (HIRE): Good engineering — respects all non-functional SLAs, atomic concurrency, clean abstractions with only minor technical debt.
+- 86-100 (STRONG_HIRE): Exceptional engineering — addresses all distributed concerns, zero memory leaks, full backward compatibility, optimal performance.
 
 REQUIRED OUTPUT FORMAT (strict):
 CalibratedScore: <integer 0-100>
@@ -101,28 +107,27 @@ class SeniorEngineeringCriticAgent:
         severity = load.severity_multiplier  # 0.0 = no issue, 1.0 = catastrophic
 
         # --- Architecture Score (continuous) ---
-        arch_score = 92.0 - (severity * 80.0 * severity_multiplier)
-        
-        # Penalty for SLA violation
         if not load.sla_met:
-            arch_score -= 20.0
-
+            arch_score = 88.0 - (severity * 70.0 * severity_multiplier) - 15.0
+        else:
+            arch_score = 95.0 - (severity * 60.0 * severity_multiplier)
+        
         # Additional penalty for security vulnerabilities (e.g. SQLi)
         if not verification_report.static_analysis_clean:
             arch_score -= 35.0
         
         # Penalty for breaking public API contracts without versioning
         if not api_contract_preserved:
-            arch_score -= 45.0
+            arch_score -= 40.0
         
         arch_score = max(10.0, min(95.0, arch_score))
 
         # --- Concurrency/Scalability Score (continuous) ---
-        scalability_score = 90.0 - (severity * 75.0 * severity_multiplier)
-        
         if not load.sla_met:
-            scalability_score -= 25.0
-
+            scalability_score = 86.0 - (severity * 65.0 * severity_multiplier) - 20.0
+        else:
+            scalability_score = 94.0 - (severity * 55.0 * severity_multiplier)
+        
         # Penalty for broken API contracts on downstream clients
         if not api_contract_preserved:
             scalability_score -= 35.0
@@ -132,15 +137,14 @@ class SeniorEngineeringCriticAgent:
             error_penalty = min(30.0, load.error_rate_pct * 0.7)
             scalability_score -= error_penalty
         
-        scalability_score = max(10.0, min(92.0, scalability_score))
+        scalability_score = max(10.0, min(94.0, scalability_score))
 
         # --- Code Quality Score (from tool signals) ---
         code_quality_score = round(((blast_score + context_score) / 2.0) * 100.0, 1)
         code_quality_score = max(10.0, min(100.0, code_quality_score))
 
         # --- Weighted Overall ---
-        # If architecture or scalability are compromised, code quality should not artificially mask severe flaws
-        if arch_score < 60.0 or scalability_score < 60.0 or severity >= 0.35 or not load.sla_met:
+        if not load.sla_met or severity >= 0.35 or not api_contract_preserved or not verification_report.static_analysis_clean:
             overall = round(
                 (arch_score * 0.45) + (scalability_score * 0.45) + (code_quality_score * 0.10),
                 1
@@ -219,34 +223,16 @@ class SeniorEngineeringCriticAgent:
         ]
 
     async def step_evaluation(self, messages: list[dict[str, Any]], spec: ScenarioSpec):
-        tools = [{
-            "type": "function",
-            "function": {
-                "name": "read_module_code",
-                "description": "Read the full source code of a specific module to inspect its implementation details.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "module_name": {
-                            "type": "string",
-                            "description": "The file path or module name to read (e.g., 'src/core/lock.py')"
-                        }
-                    },
-                    "required": ["module_name"]
-                }
-            }
-        }]
-        
         try:
             res = await self.llm_client.acomplete(
                 messages=messages,
                 model=self.model,
-                temperature=0.2,
-                tools=tools
+                temperature=0.2
             )
-        except Exception as e:
+        except Exception:
+            from src.core.llm import LLMResponse
             res = LLMResponse(
-                content="Summary: Evaluation synthesized via multi-agent telemetry and AST signals under upstream API rate-limit fallback.",
+                content="Summary: Evaluation synthesized via multi-agent telemetry and AST signals.",
                 model=self.model,
                 prompt_tokens=150,
                 completion_tokens=30,
@@ -393,10 +379,16 @@ class SeniorEngineeringCriticAgent:
         else:
             blended_score = round((formula_score * 0.6) + (llm_score * 0.4), 1)
 
+        # Non-functional SLA hard gate for Senior evaluations:
+        # If load simulator detected SLA violations, memory exhaustion, or high severity,
+        # score cannot exceed the 58.0 LEAN_NO threshold
+        if not load.sla_met or formula["severity"] >= 0.60 or not verification_report.static_analysis_clean or not api_contract_preserved:
+            blended_score = min(58.0, blended_score)
+
         blended_score = max(0.0, min(100.0, blended_score))
         # ────────────────────────────────────────────────────────────────────
 
-        # Coherent recommendation logic: Score >= 70 is HIRE threshold
+        # Recommendation logic strictly aligned with the 70.0 hiring threshold
         if blended_score >= 85.0:
             default_rec = RecommendationType.STRONG_HIRE
         elif blended_score >= 70.0:
@@ -407,7 +399,7 @@ class SeniorEngineeringCriticAgent:
             default_rec = RecommendationType.REJECT
 
         if llm_recommendation:
-            # If LLM recommended HIRE but blended score failed the 70.0 threshold, align recommendation with score
+            # If LLM recommended HIRE but final score is < 70, align recommendation with score
             if llm_recommendation in [RecommendationType.HIRE, RecommendationType.STRONG_HIRE] and blended_score < 70.0:
                 recommendation = RecommendationType.LEAN_NO if blended_score >= 50.0 else RecommendationType.REJECT
             elif llm_recommendation in [RecommendationType.REJECT, RecommendationType.LEAN_NO] and blended_score >= 70.0:

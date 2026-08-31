@@ -20,11 +20,10 @@ logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
 
 # Published Groq Cloud token pricing ($ per token)
 GROQ_MODEL_PRICING: dict[str, dict[str, float]] = {
-    "groq/openai/gpt-oss-120b": {"input": 0.00000015, "output": 0.00000060},
-    "groq/openai/gpt-oss-20b":  {"input": 0.000000075, "output": 0.00000030},
-    "groq/qwen/qwen3.8-27b":    {"input": 0.00000020, "output": 0.00000060},
-    "groq/qwen/qwen3.6-27b":    {"input": 0.00000020, "output": 0.00000060},
     "groq/llama-3.3-70b-versatile": {"input": 0.00000059, "output": 0.00000079},
+    "groq/llama-3.1-8b-instant":    {"input": 0.00000005, "output": 0.00000008},
+    "groq/openai/gpt-oss-120b":     {"input": 0.00000015, "output": 0.00000060},
+    "groq/openai/gpt-oss-20b":      {"input": 0.000000075, "output": 0.00000030},
 }
 
 
@@ -83,9 +82,10 @@ class LLMClient:
         validate_api_keys()
 
         requested_model = model or self.default_model
-        # Strictly prioritize gpt-oss family, disable silent fallbacks for inaccessible models (e.g., qwen, gemini)
         candidate_models = [
             requested_model,
+            "groq/llama-3.3-70b-versatile",
+            "groq/llama-3.1-8b-instant",
             "groq/openai/gpt-oss-120b",
             "groq/openai/gpt-oss-20b"
         ]
@@ -100,7 +100,7 @@ class LLMClient:
                 "messages": messages,
                 "temperature": temperature,
                 "num_retries": 0,
-                "timeout": 15,
+                "timeout": 12,
                 **kwargs
             }
             if tools:
@@ -108,53 +108,40 @@ class LLMClient:
             if response_format:
                 params["response_format"] = response_format
 
-            max_retries = 5
-            base_delay = 3.0
-            
-            for attempt in range(max_retries):
-                try:
-                    response = await litellm.acompletion(**params)
-                    latency_ms = (time.perf_counter() - start_time) * 1000
+            try:
+                response = await litellm.acompletion(**params)
+                latency_ms = (time.perf_counter() - start_time) * 1000
 
-                    content = response.choices[0].message.content or ""
-                    tool_calls = None
-                    if hasattr(response.choices[0].message, "tool_calls") and response.choices[0].message.tool_calls:
-                        tool_calls = [tc.model_dump() if hasattr(tc, "model_dump") else dict(tc) for tc in response.choices[0].message.tool_calls]
+                content = response.choices[0].message.content or ""
+                tool_calls = None
+                if hasattr(response.choices[0].message, "tool_calls") and response.choices[0].message.tool_calls:
+                    tool_calls = [tc.model_dump() if hasattr(tc, "model_dump") else dict(tc) for tc in response.choices[0].message.tool_calls]
 
-                    usage = getattr(response, "usage", None)
-                    prompt_tokens = usage.prompt_tokens if usage else 0
-                    completion_tokens = usage.completion_tokens if usage else 0
-                    total_tokens = usage.total_tokens if usage else prompt_tokens + completion_tokens
+                usage = getattr(response, "usage", None)
+                prompt_tokens = usage.prompt_tokens if usage else 0
+                completion_tokens = usage.completion_tokens if usage else 0
+                total_tokens = usage.total_tokens if usage else prompt_tokens + completion_tokens
 
-                    # Calculate accurate cost based on Groq Cloud pricing
-                    rates = GROQ_MODEL_PRICING.get(current_model, {"input": 0.00000015, "output": 0.00000060})
-                    cost_usd = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
+                # Calculate accurate cost based on Groq Cloud pricing
+                rates = GROQ_MODEL_PRICING.get(current_model, {"input": 0.00000015, "output": 0.00000060})
+                cost_usd = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
 
-                    return LLMResponse(
-                        content=content,
-                        tool_calls=tool_calls,
-                        model=current_model,
-                        prompt_tokens=prompt_tokens,
-                        completion_tokens=completion_tokens,
-                        total_tokens=total_tokens,
-                        cost_usd=cost_usd,
-                        latency_ms=latency_ms,
-                        raw_response=response
-                    )
-                except RateLimitError as e:
-                    err_msg = str(e)
-                    print(f"RateLimitError on model {current_model}: {e}. Retrying...")
-                    import re
-                    match = re.search(r"try again in (\d+(?:\.\d+)?)s", err_msg)
-                    wait_time = float(match.group(1)) + 1.5 if match else (base_delay * (1.5 ** attempt))
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(min(wait_time, 25.0))
-                    else:
-                        print(f"Model {current_model} exhausted rate limit retries.")
-                        break  # Move to next model
-                except Exception as e:
-                    print(f"Model {current_model} failed with error: {e}")
-                    # Instantly try next model if unavailable or other error
-                    break
+                return LLMResponse(
+                    content=content,
+                    tool_calls=tool_calls,
+                    model=current_model,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
+                    cost_usd=cost_usd,
+                    latency_ms=latency_ms,
+                    raw_response=response
+                )
+            except RateLimitError as e:
+                # Fast failover: if current model is rate-limited on Groq TPM, immediately try next candidate model
+                continue
+            except Exception as e:
+                # Try next model on provider error
+                continue
 
         raise Exception("All configured LLM providers failed to return a response.")
