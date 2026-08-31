@@ -88,6 +88,7 @@ ensure_environment() {
     if [ ! -f ".env" ] && [ -f ".env.example" ]; then
         echo -e "${YELLOW}[!] .env configuration file not found. Creating from .env.example...${NC}"
         cp .env.example .env
+        echo -e "${GREEN}[✓] Created .env file (Default: Groq / Gemini with offline deterministic fallback).${NC}"
         echo -e "${GREEN}[✓] Created .env file.${NC}"
     fi
 
@@ -172,7 +173,11 @@ show_menu() {
     echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (Baseline vs Advanced on 20 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Git Repository (Take-Home / GitHub URL / PR)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Trace Dossiers in Terminal"
-    echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
+    echo -e "  ${GREEN}6)${NC} 🧪 Run Automated Pytest Test Suite"
+    echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
+    echo -e "  ${GREEN}8)${NC} � Reinstall / Sync Virtualenv Dependencies"
+    echo -e "  ${GREEN}9)${NC} 🧹 Clean temporary files, caches and test traces"
+    echo -e "  ${GREEN}6)${NC} �🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
     echo -e "  ${GREEN}7)${NC} 🧪 Run Automated Pytest Test Suite"
     echo -e "  ${GREEN}8)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
     echo -e "  ${GREEN}9)${NC} 🔄 Reinstall / Sync Virtualenv Dependencies"
@@ -478,6 +483,7 @@ fi
 while true; do
     show_header
     show_menu
+    read -p "Enter choice [0-9]: " choice
     read -p "Enter choice [0-10]: " choice
     echo ""
 
@@ -517,16 +523,19 @@ while true; do
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
+        7)
         8)
             run_dashboard_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
+        8)
         9)
             reinstall_deps_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
+        9)
         10)
             clean_action
             echo ""
@@ -537,6 +546,7 @@ while true; do
             exit 0
             ;;
         *)
+            echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 9.${NC}"
             echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 10.${NC}"
             sleep 1
             ;;
