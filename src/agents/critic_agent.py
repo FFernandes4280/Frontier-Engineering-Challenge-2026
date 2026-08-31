@@ -355,9 +355,6 @@ class SeniorEngineeringCriticAgent:
             abs(score_gap) >= 20.0 and (
                 (llm_score <= 40.0 and score_gap > 0) or      # LLM harsher: critical flaw tools missed
                 (llm_score >= 70.0 and score_gap < -20.0)     # Formula too harsh: LLM sees candidate merit
-            abs(score_gap) >= 25.0 and (
-                (llm_score <= 30.0 and score_gap > 0 and formula["severity"] >= 0.5) or
-                (llm_score >= 75.0 and score_gap < -25.0)
             )
         )
 
@@ -369,26 +366,18 @@ class SeniorEngineeringCriticAgent:
                         f"LLM CalibratedScore ({llm_score:.1f}) diverged ≥20 points below the formula "
                         f"score ({formula_score:.1f}), indicating the static tools missed a critical flaw. "
                         f"Override Authority engaged: formula discarded, LLM judgment is final."
-                        f"LLM CalibratedScore ({llm_score:.1f}) diverged significantly below the formula "
-                        f"score ({formula_score:.1f}). Override Authority engaged: LLM judgment is final."
                     )
                 else:
                     override_reason = (
                         f"Formula score ({formula_score:.1f}) was ≥20 points below the LLM CalibratedScore "
                         f"({llm_score:.1f}), indicating the deterministic penalties over-penalized this submission. "
                         f"Override Authority engaged: formula discarded, LLM judgment is final."
-                        f"Formula score ({formula_score:.1f}) was significantly below the LLM CalibratedScore "
-                        f"({llm_score:.1f}). Override Authority engaged: LLM judgment is final."
                     )
         elif spec.scenario_id.startswith("takehome") or spec.scenario_id.startswith("custom"):
             # For Take-Home / custom repos, always trust LLM (tools are blind to novel code)
             blended_score = float(llm_score)
-        elif load.sla_met and formula["severity"] <= 0.20:
-            # For verified optimal/acceptable architectures, prioritize simulated SLA performance (70% weight)
-            blended_score = round((formula_score * 0.70) + (llm_score * 0.30), 1)
         else:
             blended_score = round((formula_score * 0.6) + (llm_score * 0.4), 1)
-            blended_score = round((formula_score * 0.60) + (llm_score * 0.40), 1)
 
         # Non-functional SLA hard gate for Senior evaluations:
         # If load simulator detected SLA violations, memory exhaustion, or high severity,

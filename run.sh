@@ -35,6 +35,56 @@ detect_python() {
     fi
 }
 
+read_env_value() {
+    local key="${1:-}"
+    if [ -z "$key" ] || [ ! -f ".env" ]; then
+        echo ""
+        return
+    fi
+    grep -E "^${key}=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "\r\n' || true
+}
+
+write_env_value() {
+    local key="${1:-}"
+    local value="${2:-}"
+    if [ -z "$key" ]; then
+        return
+    fi
+
+    if grep -q "^${key}=" .env 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${value}|" .env
+    else
+        echo "${key}=${value}" >> .env
+    fi
+    export "${key}"="${value}"
+}
+
+is_placeholder_value() {
+    local value="${1:-}"
+    if [ -z "$value" ]; then
+        return 0
+    fi
+    if [[ "$value" == *"your_"* ]] || [[ "$value" == *"your"* ]] || [[ "$value" == *"here"* ]]; then
+        return 0
+    fi
+    if [[ "$value" == "gsk_"* && ${#value} -lt 30 ]]; then
+        return 0
+    fi
+    if [[ "$value" == "AIza"* && ${#value} -lt 20 ]]; then
+        return 0
+    fi
+    return 1
+}
+
+load_dotenv_file() {
+    if [ -f ".env" ]; then
+        set -a
+        # shellcheck disable=SC1090
+        . ./.env
+        set +a
+    fi
+}
+
 ensure_environment() {
     local sys_python
     sys_python=$(detect_python)
@@ -91,70 +141,124 @@ ensure_environment() {
         echo -e "${GREEN}[✓] Created .env file.${NC}"
     fi
 
-    # 5. Ensure required data & trace directories exist
+    # 5. Load .env into the current shell so both provider keys are available
+    load_dotenv_file
+
+    # 6. Ensure required data & trace directories exist
     mkdir -p traces trajectories eval
 
-    # 6. Apply Django migrations silently if needed
+    # 7. Apply Django migrations silently if needed
     python manage.py migrate --noinput >/dev/null 2>&1 || true
 
-    # 7. Check if GROQ_API_KEY is configured or prompt user
+    # 8. Check if either provider key is configured or ask the user which one to use
     check_and_prompt_api_key
 }
 
 check_and_prompt_api_key() {
-    local current_key=""
+    local groq_key=""
+    local gemini_key=""
     if [ -f ".env" ]; then
-        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "\r\n' || true)
+        groq_key=$(read_env_value "GROQ_API_KEY")
+        gemini_key=$(read_env_value "GEMINI_API_KEY")
     fi
 
-    # Detect if key is missing, empty, or a placeholder (e.g. gsk_your_groq_api_key_here)
-    if [ -z "$current_key" ] || \
-       [[ "$current_key" == *"your"* ]] || \
-       [[ "$current_key" == *"here"* ]] || \
-       [[ "$current_key" == "gsk_"* && ${#current_key} -lt 30 ]]; then
+    if is_placeholder_value "$groq_key" && is_placeholder_value "$gemini_key"; then
         if [ -t 0 ]; then
             echo ""
-            echo -e "${YELLOW}${BOLD}┌────────────────────────────────────────────────────────┐${NC}"
-            echo -e "${YELLOW}${BOLD}│ 🔑 Configuração Inicial de Chave de API (Groq)         │${NC}"
-            echo -e "${YELLOW}${BOLD}└────────────────────────────────────────────────────────┘${NC}"
-            echo -e "${DIM}Para habilitar inferência semântica e avaliações ao vivo com LLM:${NC}"
-            read -r -p "Insira sua GROQ_API_KEY (ou pressione [Enter] para pular): " user_api_key
-            if [ -n "$user_api_key" ]; then
-                if grep -q "^GROQ_API_KEY=" .env 2>/dev/null; then
-                    sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=$user_api_key|" .env
-                else
-                    echo "GROQ_API_KEY=$user_api_key" >> .env
-                fi
-                export GROQ_API_KEY="$user_api_key"
-                echo -e "${GREEN}[✓] GROQ_API_KEY salva com sucesso no .env!${NC}\n"
-            else
-                echo -e "${DIM}[i] Prosseguindo com fallback de contingência.${NC}\n"
-            fi
+            echo -e "${YELLOW}${BOLD}┌──────────────────────────────────────────────────────────────────┐${NC}"
+            echo -e "${YELLOW}${BOLD}│ 🔑 Configure a Live LLM Provider (Groq or Gemini)             │${NC}"
+            echo -e "${YELLOW}${BOLD}└──────────────────────────────────────────────────────────────────┘${NC}"
+            echo -e "${DIM}Choose one provider to enable live model evaluation and benchmarking:${NC}"
+            echo -e "  ${GREEN}1)${NC} Groq"
+            echo -e "  ${GREEN}2)${NC} Gemini"
+            echo -e "  ${GREEN}3)${NC} Skip for now\n"
+            read -r -p "Select provider [1-3, default: 1]: " provider_choice
+            provider_choice=${provider_choice:-1}
+
+            case "$provider_choice" in
+                1)
+                    read -r -p "Enter your GROQ_API_KEY (or press [Enter] to skip): " user_api_key
+                    if [ -n "$user_api_key" ]; then
+                        write_env_value "GROQ_API_KEY" "$user_api_key"
+                        echo -e "${GREEN}[✓] GROQ_API_KEY saved successfully in .env!${NC}\n"
+                    else
+                        echo -e "${DIM}[i] Continuing without a Groq key. Fallback mode remains available.${NC}\n"
+                    fi
+                    ;;
+                2)
+                    read -r -p "Enter your GEMINI_API_KEY (or press [Enter] to skip): " user_api_key
+                    if [ -n "$user_api_key" ]; then
+                        write_env_value "GEMINI_API_KEY" "$user_api_key"
+                        echo -e "${GREEN}[✓] GEMINI_API_KEY saved successfully in .env!${NC}\n"
+                    else
+                        echo -e "${DIM}[i] Continuing without a Gemini key. Fallback mode remains available.${NC}\n"
+                    fi
+                    ;;
+                *)
+                    echo -e "${DIM}[i] Continuing with fallback mode. You can configure a key later.${NC}\n"
+                    ;;
+            esac
         fi
     fi
+
+    load_dotenv_file
 }
 
 configure_keys_action() {
     show_header
-    echo -e "${BOLD}${CYAN}🔑 CONFIGURAR CHAVES DE API & MODELOS (.env)${NC}\n"
-    local current_key=""
+    echo -e "${BOLD}${CYAN}🔑 CONFIGURE LLM PROVIDER KEYS & MODELS (.env)${NC}\n"
+    local groq_key=""
+    local gemini_key=""
     if [ -f ".env" ]; then
-        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+        groq_key=$(read_env_value "GROQ_API_KEY")
+        gemini_key=$(read_env_value "GEMINI_API_KEY")
     fi
 
-    echo -e "Chave atual no .env: ${YELLOW}${current_key:-(não configurada)}${NC}\n"
-    read -r -p "Insira a nova GROQ_API_KEY (ou Enter para manter): " new_key
-    if [ -n "$new_key" ]; then
-        if grep -q "^GROQ_API_KEY=" .env 2>/dev/null; then
-            sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=$new_key|" .env
-        else
-            echo "GROQ_API_KEY=$new_key" >> .env
-        fi
-        export GROQ_API_KEY="$new_key"
-        echo -e "\n${GREEN}[✓] GROQ_API_KEY atualizada com sucesso no arquivo .env!${NC}"
-    else
-        echo -e "\n${DIM}[i] Nenhuma alteração feita.${NC}"
-    fi
+    echo -e "Current configured keys:"
+    echo -e "  ${YELLOW}GROQ_API_KEY:${NC} ${groq_key:-<not configured>}"
+    echo -e "  ${YELLOW}GEMINI_API_KEY:${NC} ${gemini_key:-<not configured>}\n"
+
+    echo -e "Select which key to update:"
+    echo -e "  ${GREEN}1)${NC} Groq"
+    echo -e "  ${GREEN}2)${NC} Gemini"
+    echo -e "  ${GREEN}3)${NC} Both\n"
+    read -r -p "Choose provider [1-3, default: 1]: " provider_choice
+    provider_choice=${provider_choice:-1}
+
+    case "$provider_choice" in
+        1)
+            read -r -p "Enter new GROQ_API_KEY (or press [Enter] to keep current): " new_key
+            if [ -n "$new_key" ]; then
+                write_env_value "GROQ_API_KEY" "$new_key"
+                echo -e "\n${GREEN}[✓] GROQ_API_KEY updated successfully in .env!${NC}"
+            else
+                echo -e "\n${DIM}[i] No change made to GROQ_API_KEY.${NC}"
+            fi
+            ;;
+        2)
+            read -r -p "Enter new GEMINI_API_KEY (or press [Enter] to keep current): " new_key
+            if [ -n "$new_key" ]; then
+                write_env_value "GEMINI_API_KEY" "$new_key"
+                echo -e "\n${GREEN}[✓] GEMINI_API_KEY updated successfully in .env!${NC}"
+            else
+                echo -e "\n${DIM}[i] No change made to GEMINI_API_KEY.${NC}"
+            fi
+            ;;
+        3)
+            read -r -p "Enter new GROQ_API_KEY (or press [Enter] to keep current): " new_groq_key
+            if [ -n "$new_groq_key" ]; then
+                write_env_value "GROQ_API_KEY" "$new_groq_key"
+            fi
+            read -r -p "Enter new GEMINI_API_KEY (or press [Enter] to keep current): " new_gemini_key
+            if [ -n "$new_gemini_key" ]; then
+                write_env_value "GEMINI_API_KEY" "$new_gemini_key"
+            fi
+            echo -e "\n${GREEN}[✓] LLM provider keys updated successfully in .env!${NC}"
+            ;;
+        *)
+            echo -e "\n${DIM}[i] No changes made.${NC}"
+            ;;
+    esac
 }
 
 # ------------------------------------------------------------------------------
@@ -176,7 +280,7 @@ show_menu() {
     echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (10 Random Scenarios — Fast & Representative)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Git Repository (Take-Home / GitHub URL / PR)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Trace Dossiers in Terminal"
-    echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
+    echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update LLM Provider Keys & Settings (.env)"
     echo -e "  ${GREEN}7)${NC} 🧪 Run Automated Pytest Test Suite"
     echo -e "  ${GREEN}8)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
     echo -e "  ${GREEN}9)${NC} 🔄 Reinstall / Sync Virtualenv Dependencies"
