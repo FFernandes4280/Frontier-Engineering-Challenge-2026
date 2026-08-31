@@ -45,9 +45,6 @@ def validate_api_keys() -> str:
     """Validates that at least one real API key is configured in the environment."""
     for key_var, provider in [
         ("GEMINI_API_KEY", "Google Gemini"),
-        ("GROQ_API_KEY", "Groq Cloud"),
-        ("OPENAI_API_KEY", "OpenAI"),
-        ("ANTHROPIC_API_KEY", "Anthropic")
         ("GROQ_API_KEY", "Groq Cloud")
     ]:
         val = os.getenv(key_var)
@@ -90,28 +87,23 @@ class LLMClient:
 
         # 1. Normalize and prioritize requested model
         req = requested_model.lower().strip()
-        if "flash-lite" in req or "20b" in req or "8b" in req:
         if "flash-lite" in req or "-20b" in req or "-8b" in req:
             # Agile / lightweight tier
             if has_gemini:
                 candidates.extend(["gemini/gemini-flash-lite-latest", "gemini/gemini-3.5-flash-lite"])
             if has_groq:
-                candidates.extend(["groq/llama-3.1-8b-instant", "groq/openai/gpt-oss-20b"])
                 candidates.extend(["groq/openai/gpt-oss-20b", "groq/llama-3.1-8b-instant"])
         else:
             # Frontier / heavy tier (default)
             if has_gemini:
                 candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-3.6-flash"])
             if has_groq:
-                candidates.extend(["groq/llama-3.3-70b-versatile", "groq/openai/gpt-oss-120b"])
                 candidates.extend(["groq/openai/gpt-oss-120b", "groq/llama-3.3-70b-versatile"])
 
         # Fallback pool
         if has_gemini:
-            candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-flash-lite-latest", "gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash-lite"])
             candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-flash-lite-latest"])
         if has_groq:
-            candidates.extend(["groq/llama-3.3-70b-versatile", "groq/llama-3.1-8b-instant"])
             candidates.extend(["groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-20b"])
 
         # Deduplicate preserving order
