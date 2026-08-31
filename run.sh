@@ -214,104 +214,85 @@ show_cases_menu() {
 # 3. Action Implementations
 # ------------------------------------------------------------------------------
 run_baseline_action() {
-    local target_case="${1:-}"
-    if [ -z "$target_case" ]; then
-        show_header
-        echo -e "${BOLD}${YELLOW}🧪 BASELINE EVALUATION (STEP-BY-STEP TRACE)${NC}\n"
-        show_cases_menu
-        read -p "Enter case number [1-20, default: 1]: " target_case
-        target_case=${target_case:-1}
-    fi
+    show_header
+    echo -e "${BOLD}${YELLOW}🧪 BASELINE EVALUATION (STEP-BY-STEP TRACE)${NC}\n"
+    show_cases_menu
+    read -p "Enter case number [1-20, default: 1]: " target_case
+    target_case=${target_case:-1}
     echo ""
     python -m eval.harness --runner baseline --case "$target_case" --verbose
 }
 
 run_advanced_action() {
-    local target_case="${1:-}"
-    if [ -z "$target_case" ]; then
-        show_header
-        echo -e "${BOLD}${CYAN}🤖 ADVANCED FSM SQUAD EVALUATION${NC}\n"
-        show_cases_menu
-        read -p "Enter case number [1-20, default: 1]: " target_case
-        target_case=${target_case:-1}
-    fi
+    show_header
+    echo -e "${BOLD}${CYAN}🤖 ADVANCED FSM SQUAD EVALUATION${NC}\n"
+    show_cases_menu
+    read -p "Enter case number [1-20, default: 1]: " target_case
+    target_case=${target_case:-1}
     echo ""
     python -m eval.harness --runner advanced --case "$target_case" --verbose
 }
 
 run_benchmark_action() {
-    local runner="${1:-both}"
-    local sample_or_limit="${2:-10}"
+    show_header
+    echo -e "${BOLD}${CYAN}📊 BENCHMARK EVALUATION MODES${NC}\n"
+    echo -e "  ${GREEN}1)${NC} 🎲 10-Case Random Sample Benchmark (Baseline vs Advanced FSM) ${YELLOW}[Recomendado / Rápido]${NC}"
+    echo -e "  ${GREEN}2)${NC} ⚡ Quick 2-Case Smoke Benchmark (Fast Sanity Check)"
+    echo -e "  ${GREEN}3)${NC} 🤖 Advanced Solution Only (10 Random Cases)"
+    echo -e "  ${GREEN}4)${NC} 🧪 Baseline Solution Only (10 Random Cases)"
+    echo -e "  ${GREEN}5)${NC} 🌐 Full 20-Case Comprehensive Benchmark (All Cases)"
+    echo -e "  ${GREEN}6)${NC} 🎯 Custom Sample (Specify number of random cases)"
+    echo ""
+    read -p "Select benchmark mode [1-6, default: 1]: " bench_choice
+    bench_choice=${bench_choice:-1}
+    echo ""
 
-    if [ "$#" -eq 0 ]; then
-        show_header
-        echo -e "${BOLD}${CYAN}📊 BENCHMARK EVALUATION MODES${NC}\n"
-        echo -e "  ${GREEN}1)${NC} 🎲 10-Case Random Sample Benchmark (Baseline vs Advanced FSM) ${YELLOW}[Recomendado / Rápido]${NC}"
-        echo -e "  ${GREEN}2)${NC} ⚡ Quick 2-Case Smoke Benchmark (Fast Sanity Check)"
-        echo -e "  ${GREEN}3)${NC} 🤖 Advanced Solution Only (10 Random Cases)"
-        echo -e "  ${GREEN}4)${NC} 🧪 Baseline Solution Only (10 Random Cases)"
-        echo -e "  ${GREEN}5)${NC} 🌐 Full 20-Case Comprehensive Benchmark (All Cases)"
-        echo -e "  ${GREEN}6)${NC} 🎯 Custom Sample (Specify number of random cases)"
-        echo ""
-        read -p "Select benchmark mode [1-6, default: 1]: " bench_choice
-        bench_choice=${bench_choice:-1}
-        echo ""
-
-        case $bench_choice in
-            1)
-                python -m eval.harness --runner both --sample 10
-                ;;
-            2)
-                python -m eval.harness --runner both --limit 2
-                ;;
-            3)
-                python -m eval.harness --runner advanced --sample 10
-                ;;
-            4)
-                python -m eval.harness --runner baseline --sample 10
-                ;;
-            5)
-                python -m eval.harness --runner both
-                ;;
-            6)
-                read -p "Enter number of random cases to evaluate [1-20, default: 10]: " num_cases
-                num_cases=${num_cases:-10}
-                python -m eval.harness --runner both --sample "$num_cases"
-                ;;
-            *)
-                python -m eval.harness --runner both --sample 10
-                ;;
-        esac
-    else
-        python -m eval.harness --runner "$runner" --sample "$sample_or_limit"
-    fi
+    case $bench_choice in
+        1)
+            python -m eval.harness --runner both --sample 10
+            ;;
+        2)
+            python -m eval.harness --runner both --limit 2
+            ;;
+        3)
+            python -m eval.harness --runner advanced --sample 10
+            ;;
+        4)
+            python -m eval.harness --runner baseline --sample 10
+            ;;
+        5)
+            python -m eval.harness --runner both
+            ;;
+        6)
+            read -p "Enter number of random cases to evaluate [1-20, default: 10]: " num_cases
+            num_cases=${num_cases:-10}
+            python -m eval.harness --runner both --sample "$num_cases"
+            ;;
+        *)
+            python -m eval.harness --runner both --sample 10
+            ;;
+    esac
 }
 
 run_custom_review_action() {
-    local repo_url="${1:-}"
-    local commit_hash="${2:-HEAD}"
-    local mode="${3:-diff}"
-
+    show_header
+    echo -e "${BOLD}${CYAN}🌐 REVIEW CUSTOM GIT REPOSITORY / TAKE-HOME${NC}\n"
+    read -p "Enter Git Repository URL (e.g. https://github.com/FFernandes4280/development-tools): " repo_url
     if [ -z "$repo_url" ]; then
-        show_header
-        echo -e "${BOLD}${CYAN}🌐 REVIEW CUSTOM GIT REPOSITORY / TAKE-HOME${NC}\n"
-        read -p "Enter Git Repository URL (e.g. https://github.com/FFernandes4280/development-tools): " repo_url
-        if [ -z "$repo_url" ]; then
-            echo -e "${YELLOW}No repository provided. Aborted.${NC}"
-            return
-        fi
-        read -p "Enter branch or commit hash [default: HEAD]: " commit_hash
-        commit_hash=${commit_hash:-HEAD}
+        echo -e "${YELLOW}No repository provided. Aborted.${NC}"
+        return
+    fi
+    read -p "Enter branch or commit hash [default: HEAD]: " commit_hash
+    commit_hash=${commit_hash:-HEAD}
 
-        echo -e "\nSelect review mode:"
-        echo -e "  1) Incremental Commit / PR Diff"
-        echo -e "  2) Full Repository Take-Home Project"
-        read -p "Enter mode [1 or 2, default: 1]: " mode_choice
-        if [ "$mode_choice" = "2" ]; then
-            mode="full_repo"
-        else
-            mode="diff"
-        fi
+    echo -e "\nSelect review mode:"
+    echo -e "  1) Incremental Commit / PR Diff"
+    echo -e "  2) Full Repository Take-Home Project"
+    read -p "Enter mode [1 or 2, default: 1]: " mode_choice
+    if [ "$mode_choice" = "2" ]; then
+        mode="full_repo"
+    else
+        mode="diff"
     fi
 
     echo ""
@@ -380,14 +361,13 @@ with open('$selected_file', 'r', encoding='utf-8') as f:
 
 run_tests_action() {
     echo -e "${CYAN}Running Automated Pytest Test Suite...${NC}\n"
-    pytest -v "$@"
+    pytest -v
 }
 
 run_dashboard_action() {
-    local port="${1:-8000}"
-    echo -e "${CYAN}🚀 Starting Django Web Dashboard on ${BLUE}http://127.0.0.1:${port}${NC}..."
+    echo -e "${CYAN}🚀 Starting Django Web Dashboard on ${BLUE}http://127.0.0.1:8000${NC}..."
     echo -e "${YELLOW}Press [Ctrl+C] to stop the web server when done.${NC}\n"
-    python manage.py runserver "127.0.0.1:${port}"
+    python manage.py runserver "127.0.0.1:8000"
 }
 
 reinstall_deps_action() {
@@ -404,81 +384,11 @@ clean_action() {
     echo -e "${GREEN}[✓] Cleanup complete!${NC}"
 }
 
-show_cli_help() {
-    echo -e "${BOLD}micro1 Frontier Engineering Challenge 2026 — CLI Runner${NC}"
-    echo ""
-    echo -e "${BOLD}Usage:${NC} ./run.sh [COMMAND] [ARGS...]"
-    echo ""
-    echo -e "${BOLD}Available Commands:${NC}"
-    echo -e "  ${GREEN}(none)${NC}                     Launch interactive terminal menu"
-    echo -e "  ${GREEN}baseline [CASE_NUM]${NC}        Run Baseline evaluation on a single case (1-20)"
-    echo -e "  ${GREEN}advanced [CASE_NUM]${NC}        Run Advanced FSM evaluation on a single case (1-20)"
-    echo -e "  ${GREEN}benchmark [RUNNER] [LIMIT]${NC} Run benchmark (e.g. ./run.sh benchmark both 2)"
-    echo -e "  ${GREEN}review <REPO_URL> [COMMIT]${NC} Review custom Git repository or Take-Home project"
-    echo -e "  ${GREEN}dashboard [PORT]${NC}           Launch Django Web Dashboard (default port: 8000)"
-    echo -e "  ${GREEN}web / server${NC}               Alias for dashboard"
-    echo -e "  ${GREEN}test [PYTEST_ARGS...]${NC}      Run automated pytest test suite"
-    echo -e "  ${GREEN}traces${NC}                     Inspect latest trajectory reports and dossiers"
-    echo -e "  ${GREEN}setup / install${NC}            Initialize virtualenv and install dependencies"
-    echo -e "  ${GREEN}clean${NC}                      Clean caches and temporary files"
-    echo -e "  ${GREEN}key / config / env${NC}         Configure or update GROQ_API_KEY in .env"
-    echo -e "  ${GREEN}help / --help / -h${NC}         Display this help message"
-    echo ""
-}
-
 # ------------------------------------------------------------------------------
-# 4. Main Entry Point: Direct Command vs Interactive Menu
+# 4. Main Entry Point: Interactive Menu Loop
 # ------------------------------------------------------------------------------
 ensure_environment
 
-# If CLI arguments were provided, execute directly without opening the menu
-if [ $# -gt 0 ]; then
-    cmd="$1"
-    shift
-    case "$cmd" in
-        baseline)
-            run_baseline_action "$@"
-            ;;
-        advanced)
-            run_advanced_action "$@"
-            ;;
-        benchmark|bench)
-            run_benchmark_action "$@"
-            ;;
-        review)
-            run_custom_review_action "$@"
-            ;;
-        traces|trace|trajectory|trajectories)
-            inspect_traces_action
-            ;;
-        key|keys|config|env)
-            configure_keys_action
-            ;;
-        test|tests|pytest)
-            run_tests_action "$@"
-            ;;
-        dashboard|web|server)
-            run_dashboard_action "$@"
-            ;;
-        setup|install)
-            reinstall_deps_action
-            ;;
-        clean)
-            clean_action
-            ;;
-        help|--help|-h)
-            show_cli_help
-            ;;
-        *)
-            echo -e "${RED}[ERROR] Unknown command: '$cmd'${NC}"
-            show_cli_help
-            exit 1
-            ;;
-    esac
-    exit 0
-fi
-
-# Interactive Menu Loop
 while true; do
     show_header
     show_menu
