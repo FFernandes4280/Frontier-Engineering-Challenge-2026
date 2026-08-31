@@ -173,7 +173,7 @@ show_menu() {
     echo -e "${BOLD}Select an action to execute:${NC}"
     echo -e "  ${GREEN}1)${NC} 🧪 Run Baseline on Single Repository (with full Step-by-Step trace)"
     echo -e "  ${GREEN}2)${NC} 🤖 Run Advanced Solution on Single Repository (FSM Multi-Agent Squad)"
-    echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (Baseline vs Advanced on 20 Cases)"
+    echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (10 Random Scenarios — Fast & Representative)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Git Repository (Take-Home / GitHub URL / PR)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Trace Dossiers in Terminal"
     echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
@@ -241,49 +241,49 @@ run_advanced_action() {
 
 run_benchmark_action() {
     local runner="${1:-both}"
-    local limit="${2:-}"
+    local sample_or_limit="${2:-10}"
 
     if [ "$#" -eq 0 ]; then
         show_header
         echo -e "${BOLD}${CYAN}📊 BENCHMARK EVALUATION MODES${NC}\n"
-        echo -e "  ${GREEN}1)${NC} Full 20-Case Comparative Benchmark (Baseline vs Advanced FSM)"
-        echo -e "  ${GREEN}2)${NC} Quick 2-Case Smoke Benchmark (Fast Sanity Check)"
-        echo -e "  ${GREEN}3)${NC} Advanced Solution Only (All 20 Cases)"
-        echo -e "  ${GREEN}4)${NC} Baseline Solution Only (All 20 Cases)"
-        echo -e "  ${GREEN}5)${NC} Custom Sample (Specify number of cases)"
+        echo -e "  ${GREEN}1)${NC} 🎲 10-Case Random Sample Benchmark (Baseline vs Advanced FSM) ${YELLOW}[Recomendado / Rápido]${NC}"
+        echo -e "  ${GREEN}2)${NC} ⚡ Quick 2-Case Smoke Benchmark (Fast Sanity Check)"
+        echo -e "  ${GREEN}3)${NC} 🤖 Advanced Solution Only (10 Random Cases)"
+        echo -e "  ${GREEN}4)${NC} 🧪 Baseline Solution Only (10 Random Cases)"
+        echo -e "  ${GREEN}5)${NC} 🌐 Full 20-Case Comprehensive Benchmark (All Cases)"
+        echo -e "  ${GREEN}6)${NC} 🎯 Custom Sample (Specify number of random cases)"
         echo ""
-        read -p "Select benchmark mode [1-5, default: 1]: " bench_choice
+        read -p "Select benchmark mode [1-6, default: 1]: " bench_choice
         bench_choice=${bench_choice:-1}
         echo ""
 
         case $bench_choice in
             1)
-                python -m eval.harness --runner both
+                python -m eval.harness --runner both --sample 10
                 ;;
             2)
                 python -m eval.harness --runner both --limit 2
                 ;;
             3)
-                python -m eval.harness --runner advanced
+                python -m eval.harness --runner advanced --sample 10
                 ;;
             4)
-                python -m eval.harness --runner baseline
+                python -m eval.harness --runner baseline --sample 10
                 ;;
             5)
-                read -p "Enter number of cases to evaluate [1-20]: " num_cases
-                num_cases=${num_cases:-5}
-                python -m eval.harness --runner both --limit "$num_cases"
+                python -m eval.harness --runner both
+                ;;
+            6)
+                read -p "Enter number of random cases to evaluate [1-20, default: 10]: " num_cases
+                num_cases=${num_cases:-10}
+                python -m eval.harness --runner both --sample "$num_cases"
                 ;;
             *)
-                python -m eval.harness --runner both
+                python -m eval.harness --runner both --sample 10
                 ;;
         esac
     else
-        local cmd="python -m eval.harness --runner $runner"
-        if [ -n "$limit" ]; then
-            cmd="$cmd --limit $limit"
-        fi
-        $cmd
+        python -m eval.harness --runner "$runner" --sample "$sample_or_limit"
     fi
 }
 

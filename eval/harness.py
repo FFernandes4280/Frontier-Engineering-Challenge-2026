@@ -101,7 +101,7 @@ def run(
 ):
     """Executes the benchmark and displays the official comparative table."""
     cases = load_dataset(dataset)
-    
+
     if case and 1 <= case <= len(cases):
         cases = [cases[case - 1]]
         console.print(f"[bold cyan]🎯 Selected Single Case #{case}: {cases[0]['title']} ({cases[0]['spec'].get('github_repo', 'N/A')})[/bold cyan]\n")
@@ -110,6 +110,11 @@ def run(
         # If single case run interactively, default interactive to True if not specified
         if interactive is False and runner in ["advanced", "both"]:
             interactive = True
+    elif sample and sample > 0:
+        import random
+        sample_size = min(sample, len(cases))
+        cases = random.sample(cases, sample_size)
+        console.print(f"[bold yellow]🎲 Randomly sampled {len(cases)} benchmark scenarios from the 20-case pool for faster evaluation.[/bold yellow]")
     elif limit and limit > 0:
         cases = cases[:limit]
         console.print(f"[yellow]⚠️ Limiting benchmark evaluation to the first {limit} test cases.[/yellow]")
