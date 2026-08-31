@@ -14,7 +14,7 @@ from src.core.domain import (
     ScenarioSpec,
     SeniorVettingDossier,
 )
-from src.core.llm import LLMClient
+from src.core.llm import LLMClient, LLMResponse
 from src.tracing.logger import TraceLogger
 
 console = Console()

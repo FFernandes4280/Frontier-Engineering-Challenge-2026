@@ -232,7 +232,7 @@ class SeniorEngineeringCriticAgent:
             )
         except Exception as e:
             res = LLMResponse(
-                content="CalibratedScore: 70.0\nRecommendation: LEAN_NO\nSummary: Evaluation completed via telemetry & AST signals under API rate-limit fallback.",
+                content="Summary: Evaluation synthesized via multi-agent telemetry and AST signals under upstream API rate-limit fallback.",
                 model=self.model,
                 prompt_tokens=150,
                 completion_tokens=30,

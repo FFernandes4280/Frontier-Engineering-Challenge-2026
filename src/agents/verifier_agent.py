@@ -16,6 +16,7 @@ from src.core.domain import (
     VerificationReport,
 )
 from src.core.llm import LLMClient
+from src.tools.load_simulator import LoadSimulator
 
 
 SECURITY_SYSTEM_PROMPT = """\
@@ -88,6 +89,9 @@ class CodeVerifierAgent:
         """Runs LLM-driven semantic security + load analysis. Returns VerificationReport."""
         full_diff = submission.full_diff or "\n".join(fc.diff_content for fc in submission.file_changes)
 
+        # Baseline heuristics
+        h = LoadSimulator._analyze_heuristics(full_diff, spec)
+
         # --- Security Analysis (LLM) ---
         security_payload = (
             f"=== SCENARIO ===\n"
@@ -95,22 +99,26 @@ class CodeVerifierAgent:
             f"Known Flaw: {spec.ground_truth_flaw}\n\n"
             f"=== CANDIDATE DIFF ===\n{full_diff[:6000]}"
         )
-        sec_res = await self.llm_client.acomplete(
-            messages=[
-                {"role": "system", "content": SECURITY_SYSTEM_PROMPT},
-                {"role": "user", "content": security_payload},
-            ],
-            model=self.model,
-            temperature=0.1,
-        )
+        sec_res = None
+        try:
+            sec_res = await self.llm_client.acomplete(
+                messages=[
+                    {"role": "system", "content": SECURITY_SYSTEM_PROMPT},
+                    {"role": "user", "content": security_payload},
+                ],
+                model=self.model,
+                temperature=0.1,
+            )
+        except Exception:
+            pass
 
         vulns: list[str] = []
         race_detected = False
         mem_leak = False
-        deadlock_risk = False
-        static_clean = True
+        deadlock_risk = h["deadlock"]
+        static_clean = not h["deadlock"] and (h["severity"] == 0.0)
 
-        if sec_res.content:
+        if sec_res and sec_res.content:
             raw = sec_res.content.strip()
             if raw.startswith("```"):
                 raw = raw.split("```", 2)[1]
@@ -121,16 +129,18 @@ class CodeVerifierAgent:
                 vulns = sec_data.get("vulnerabilities", [])
                 race_detected = sec_data.get("race_conditions_detected", False)
                 mem_leak = sec_data.get("memory_leak_detected", False)
-                deadlock_risk = sec_data.get("deadlock_risk", False)
+                deadlock_risk = sec_data.get("deadlock_risk", deadlock_risk)
                 static_clean = sec_data.get("static_analysis_clean", len(vulns) == 0)
                 if race_detected:
                     vulns.append("Race condition: shared mutable state accessed without synchronization.")
                 if mem_leak:
                     vulns.append("Memory leak: unbounded collection growth or unreleased resource.")
             except (json.JSONDecodeError, ValueError):
-                if len(raw) > 20 and "none" not in raw.lower():
+                if len(raw) > 10 and "none" not in raw.lower():
                     vulns.append(f"LLM Security Finding: {raw[:300]}")
                     static_clean = False
+                    if "deadlock" in raw.lower():
+                        deadlock_risk = True
 
         # --- Load / Performance Prediction (LLM) ---
         sla = spec.requirements
@@ -141,27 +151,30 @@ class CodeVerifierAgent:
             f"Max Memory: {sla.max_memory_mb}MB\n\n"
             f"=== CANDIDATE DIFF ===\n{full_diff[:6000]}"
         )
-        load_res = await self.llm_client.acomplete(
-            messages=[
-                {"role": "system", "content": LOAD_SYSTEM_PROMPT},
-                {"role": "user", "content": load_payload},
-            ],
-            model=self.model,
-            temperature=0.1,
-        )
+        load_res = None
+        try:
+            load_res = await self.llm_client.acomplete(
+                messages=[
+                    {"role": "system", "content": LOAD_SYSTEM_PROMPT},
+                    {"role": "user", "content": load_payload},
+                ],
+                model=self.model,
+                temperature=0.1,
+            )
+        except Exception:
+            pass
 
-        # Safe defaults (healthy baseline)
-        p95 = sla.latency_p95_sla_ms * 0.5
-        p99 = sla.latency_p95_sla_ms * 0.8
-        error_rate = 0.0
-        peak_mem = 64.0
-        throughput = float(sla.concurrency_target_rps)
-        deadlock = deadlock_risk
-        sla_ok = True
-        severity = 0.0
-        details = "All concurrency SLAs and throughput targets met."
+        p95 = h["p95"]
+        p99 = h["p99"]
+        error_rate = h["error_rate"]
+        peak_mem = h["peak_mem"]
+        throughput = h["throughput"]
+        deadlock = deadlock_risk or h["deadlock"]
+        sla_ok = h["sla_ok"] and not deadlock
+        severity = h["severity"]
+        details = h["details"]
 
-        if load_res.content:
+        if load_res and load_res.content:
             raw = load_res.content.strip()
             if raw.startswith("```"):
                 raw = raw.split("```", 2)[1]
@@ -171,16 +184,16 @@ class CodeVerifierAgent:
                 ld = json.loads(raw)
                 p95 = float(ld.get("p95_latency_ms", p95))
                 p99 = float(ld.get("p99_latency_ms", p99))
-                error_rate = float(ld.get("error_rate_pct", 0.0))
-                peak_mem = float(ld.get("memory_peak_mb", 64.0))
+                error_rate = float(ld.get("error_rate_pct", error_rate))
+                peak_mem = float(ld.get("memory_peak_mb", peak_mem))
                 throughput = float(ld.get("throughput_rps", throughput))
-                deadlock = bool(ld.get("distributed_deadlock_detected", False)) or deadlock_risk
-                sla_ok = bool(ld.get("sla_met", True))
-                severity = min(1.0, max(0.0, float(ld.get("severity_multiplier", 0.0))))
+                deadlock = bool(ld.get("distributed_deadlock_detected", deadlock)) or deadlock_risk
+                sla_ok = bool(ld.get("sla_met", sla_ok))
+                severity = min(1.0, max(0.0, float(ld.get("severity_multiplier", severity))))
                 details = ld.get("details", details)
             except (json.JSONDecodeError, ValueError, TypeError):
-                if deadlock_risk or race_detected:
-                    severity = 0.7
+                if deadlock_risk or race_detected or deadlock:
+                    severity = max(severity, 0.7)
                     sla_ok = False
                     details = "Semantic analysis detected concurrency/deadlock risk."
 
@@ -192,7 +205,7 @@ class CodeVerifierAgent:
             error_rate_pct=error_rate,
             distributed_deadlock_detected=deadlock,
             memory_peak_mb=peak_mem,
-            sla_met=sla_ok and p95 <= sla.latency_p95_sla_ms and peak_mem <= sla.max_memory_mb,
+            sla_met=sla_ok and p95 <= sla.latency_p95_sla_ms and peak_mem <= sla.max_memory_mb and not deadlock,
             severity_multiplier=severity,
             details=details,
         )
@@ -200,9 +213,8 @@ class CodeVerifierAgent:
         return VerificationReport(
             functional_tests_passed=10,
             total_functional_tests=10,
-            all_tests_passed=static_clean and load_result.sla_met,
+            all_tests_passed=static_clean and load_result.sla_met and not deadlock,
             load_metrics=load_result,
             security_vulnerabilities_found=vulns,
-            static_analysis_clean=static_clean,
+            static_analysis_clean=static_clean and not deadlock,
         )
-
