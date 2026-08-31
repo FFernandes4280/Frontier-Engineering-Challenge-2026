@@ -110,7 +110,7 @@
     <!-- SECTION 1: BENCHMARK OVERVIEW -->
     <div id="section-overview" class="app-section {% if selected_case %}d-none{% endif %}">
         <div class="row g-4">
-            <div class="col-lg-8">
+            <div class="col-lg-12">
                 <div class="card p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold text-white mb-0"><i class="fa-solid fa-trophy text-warning me-2"></i>Official 20-Scenario Benchmark Cases</h5>
@@ -163,36 +163,6 @@
                                 {% endif %}
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="card p-4 mb-4">
-                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-chart-pie text-info me-2"></i>Head-to-Head Win Rate</h5>
-                    <div style="height: 220px; position: relative;">
-                        <canvas id="winRateChart"></canvas>
-                    </div>
-                    <div class="text-center mt-3 small text-muted" id="winRateCaption">
-                        Advanced (20B Squad) wins <strong>19 of 20 cases (95%)</strong> vs Single-Prompt Baseline (120B).
-                    </div>
-                </div>
-
-                <div class="card p-4">
-                    <h5 class="fw-bold text-white mb-3"><i class="fa-solid fa-coins text-warning me-2"></i>Groq Cloud Economics</h5>
-                    <div class="p-3 mb-2 rounded bg-dark border border-secondary">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Advanced Solution (20B):</span>
-                            <strong class="text-success" id="econAdvCost">$0.000155 / task</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mt-1">
-                            <span class="text-muted">Baseline Solution (120B):</span>
-                            <strong class="text-light" id="econBlCost">$0.000320 / task</strong>
-                        </div>
-                        <div class="progress mt-2" style="height: 6px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 48.5%"></div>
-                        </div>
-                        <small class="text-success mt-1 d-block"><i class="fa-solid fa-check me-1"></i>51.5% cost reduction</small>
                     </div>
                 </div>
             </div>
@@ -484,7 +454,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-8">
+            <div class="col-lg-12">
                 <div class="card p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold text-white mb-0" id="traceViewerTitle"><i class="bi bi-terminal me-2"></i>Select a trace on the left to inspect</h6>
