@@ -248,29 +248,17 @@ run_benchmark_action() {
     echo ""
 
     case $bench_choice in
-        1)
-            python -m eval.harness --runner both --sample 10
-            ;;
-        2)
-            python -m eval.harness --runner both --limit 2
-            ;;
-        3)
-            python -m eval.harness --runner advanced --sample 10
-            ;;
-        4)
-            python -m eval.harness --runner baseline --sample 10
-            ;;
-        5)
-            python -m eval.harness --runner both
-            ;;
+        1) python -m eval.harness --runner both --sample 10 ;;
+        2) python -m eval.harness --runner both --limit 2 ;;
+        3) python -m eval.harness --runner advanced --sample 10 ;;
+        4) python -m eval.harness --runner baseline --sample 10 ;;
+        5) python -m eval.harness --runner both ;;
         6)
             read -p "Enter number of random cases to evaluate [1-20, default: 10]: " num_cases
             num_cases=${num_cases:-10}
             python -m eval.harness --runner both --sample "$num_cases"
             ;;
-        *)
-            python -m eval.harness --runner both --sample 10
-            ;;
+        *) python -m eval.harness --runner both --sample 10 ;;
     esac
 }
 
@@ -289,10 +277,9 @@ run_custom_review_action() {
     echo -e "  1) Incremental Commit / PR Diff"
     echo -e "  2) Full Repository Take-Home Project"
     read -p "Enter mode [1 or 2, default: 1]: " mode_choice
+    local mode="diff"
     if [ "$mode_choice" = "2" ]; then
         mode="full_repo"
-    else
-        mode="diff"
     fi
 
     echo ""
@@ -320,40 +307,21 @@ inspect_traces_action() {
         local size
         size=$(ls -lh "$file" | awk '{print $5}')
         echo -e "  ${CYAN}$count)${NC} ${file} ${DIM}(${size})${NC}"
-        if [ $count -ge 15 ]; then
-            break
-        fi
+        if [ $count -ge 15 ]; then break; fi
     done
     echo ""
     read -p "Enter trace number to view [1-$count, default: 1] (or 0 to cancel): " file_choice
     file_choice=${file_choice:-1}
 
-    if [ "$file_choice" -eq 0 ] || [ "$file_choice" -gt "$count" ]; then
-        return
-    fi
+    if [ "$file_choice" -eq 0 ] || [ "$file_choice" -gt "$count" ]; then return; fi
 
     local selected_file="${trace_files[$((file_choice - 1))]}"
     echo -e "\n${BOLD}${MAGENTA}--- Displaying ${selected_file} ---${NC}\n"
 
     if [[ "$selected_file" == *.md ]]; then
-        python -c "
-import sys
-from rich.console import Console
-from rich.markdown import Markdown
-
-with open('$selected_file', 'r', encoding='utf-8') as f:
-    Console().print(Markdown(f.read()))
-" 2>/dev/null || cat "$selected_file"
+        python -c "import sys; from rich.console import Console; from rich.markdown import Markdown; with open('$selected_file', 'r', encoding='utf-8') as f: Console().print(Markdown(f.read()))" 2>/dev/null || cat "$selected_file"
     elif [[ "$selected_file" == *.json ]]; then
-        python -c "
-import json, sys
-from rich.console import Console
-from rich.syntax import Syntax
-
-with open('$selected_file', 'r', encoding='utf-8') as f:
-    data = json.dumps(json.load(f), indent=2)
-    Console().print(Syntax(data, 'json', theme='monokai', line_numbers=True))
-" 2>/dev/null || cat "$selected_file"
+        python -c "import json, sys; from rich.console import Console; from rich.syntax import Syntax; with open('$selected_file', 'r', encoding='utf-8') as f: data = json.dumps(json.load(f), indent=2); Console().print(Syntax(data, 'json', theme='monokai', line_numbers=True))" 2>/dev/null || cat "$selected_file"
     else
         cat "$selected_file"
     fi
