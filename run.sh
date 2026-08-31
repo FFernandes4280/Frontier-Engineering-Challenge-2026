@@ -104,10 +104,14 @@ ensure_environment() {
 check_and_prompt_api_key() {
     local current_key=""
     if [ -f ".env" ]; then
-        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "\r\n' || true)
     fi
 
-    if [ -z "$current_key" ] || [ "$current_key" = "your-groq-api-key-here" ] || [[ "$current_key" == *"your-groq"* ]]; then
+    # Detect if key is missing, empty, or a placeholder (e.g. gsk_your_groq_api_key_here)
+    if [ -z "$current_key" ] || \
+       [[ "$current_key" == *"your"* ]] || \
+       [[ "$current_key" == *"here"* ]] || \
+       [[ "$current_key" == "gsk_"* && ${#current_key} -lt 30 ]]; then
         if [ -t 0 ]; then
             echo ""
             echo -e "${YELLOW}${BOLD}┌────────────────────────────────────────────────────────┐${NC}"
@@ -172,11 +176,7 @@ show_menu() {
     echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (Baseline vs Advanced on 20 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Git Repository (Take-Home / GitHub URL / PR)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Trace Dossiers in Terminal"
-    echo -e "  ${GREEN}6)${NC} 🧪 Run Automated Pytest Test Suite"
-    echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
-    echo -e "  ${GREEN}8)${NC} � Reinstall / Sync Virtualenv Dependencies"
-    echo -e "  ${GREEN}9)${NC} 🧹 Clean temporary files, caches and test traces"
-    echo -e "  ${GREEN}6)${NC} �🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
+    echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
     echo -e "  ${GREEN}7)${NC} 🧪 Run Automated Pytest Test Suite"
     echo -e "  ${GREEN}8)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
     echo -e "  ${GREEN}9)${NC} 🔄 Reinstall / Sync Virtualenv Dependencies"
@@ -482,7 +482,6 @@ fi
 while true; do
     show_header
     show_menu
-    read -p "Enter choice [0-9]: " choice
     read -p "Enter choice [0-10]: " choice
     echo ""
 

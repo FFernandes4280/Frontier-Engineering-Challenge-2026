@@ -14,6 +14,7 @@ from src.core.domain import (
     ScenarioSpec,
     SeniorVettingDossier,
 )
+from src.core.llm import LLMClient, LLMResponse
 from src.tracing.logger import TraceLogger
 
 console = Console()
@@ -138,9 +139,8 @@ class BaselineVettingRunner:
             )
         except Exception as e:
             if self.verbose:
-                console.print(f"[yellow]⚠️ Upstream LLM API call failed ({e}). Run './run.sh key' to configure a valid GROQ_API_KEY for live evaluations.[/yellow]")
+                console.print(f"[yellow]⚠️ Upstream LLM API call failed: {e}[/yellow]")
             res = LLMResponse(
-                content="Score: 70.0\nRecommendation: LEAN_NO\nSummary: Monolithic baseline evaluated code submission via local heuristics due to upstream API rate limits.",
                 content="Score: 50.0\nRecommendation: LEAN_NO\nSummary: Baseline evaluation fallback: Upstream LLM API key is missing, invalid, or rate-limited. Configure GROQ_API_KEY in .env for real-time model scoring.",
                 model=self.model,
                 prompt_tokens=200,
