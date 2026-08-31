@@ -88,7 +88,7 @@ ensure_environment() {
     if [ ! -f ".env" ] && [ -f ".env.example" ]; then
         echo -e "${YELLOW}[!] .env configuration file not found. Creating from .env.example...${NC}"
         cp .env.example .env
-        echo -e "${GREEN}[✓] Created .env file (Default: Groq / Gemini with offline deterministic fallback).${NC}"
+        echo -e "${GREEN}[✓] Created .env file.${NC}"
     fi
 
     # 5. Ensure required data & trace directories exist
@@ -96,6 +96,61 @@ ensure_environment() {
 
     # 6. Apply Django migrations silently if needed
     python manage.py migrate --noinput >/dev/null 2>&1 || true
+
+    # 7. Check if GROQ_API_KEY is configured or prompt user
+    check_and_prompt_api_key
+}
+
+check_and_prompt_api_key() {
+    local current_key=""
+    if [ -f ".env" ]; then
+        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+    fi
+
+    if [ -z "$current_key" ] || [ "$current_key" = "your-groq-api-key-here" ] || [[ "$current_key" == *"your-groq"* ]]; then
+        if [ -t 0 ]; then
+            echo ""
+            echo -e "${YELLOW}${BOLD}┌────────────────────────────────────────────────────────┐${NC}"
+            echo -e "${YELLOW}${BOLD}│ 🔑 Configuração Inicial de Chave de API (Groq)         │${NC}"
+            echo -e "${YELLOW}${BOLD}└────────────────────────────────────────────────────────┘${NC}"
+            echo -e "${DIM}Para habilitar inferência semântica e avaliações ao vivo com LLM:${NC}"
+            read -r -p "Insira sua GROQ_API_KEY (ou pressione [Enter] para pular): " user_api_key
+            if [ -n "$user_api_key" ]; then
+                if grep -q "^GROQ_API_KEY=" .env 2>/dev/null; then
+                    sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=$user_api_key|" .env
+                else
+                    echo "GROQ_API_KEY=$user_api_key" >> .env
+                fi
+                export GROQ_API_KEY="$user_api_key"
+                echo -e "${GREEN}[✓] GROQ_API_KEY salva com sucesso no .env!${NC}\n"
+            else
+                echo -e "${DIM}[i] Prosseguindo com fallback de contingência.${NC}\n"
+            fi
+        fi
+    fi
+}
+
+configure_keys_action() {
+    show_header
+    echo -e "${BOLD}${CYAN}🔑 CONFIGURAR CHAVES DE API & MODELOS (.env)${NC}\n"
+    local current_key=""
+    if [ -f ".env" ]; then
+        current_key=$(grep -E "^GROQ_API_KEY=" .env 2>/dev/null | head -n1 | cut -d '=' -f2- | tr -d ' "' || true)
+    fi
+
+    echo -e "Chave atual no .env: ${YELLOW}${current_key:-(não configurada)}${NC}\n"
+    read -r -p "Insira a nova GROQ_API_KEY (ou Enter para manter): " new_key
+    if [ -n "$new_key" ]; then
+        if grep -q "^GROQ_API_KEY=" .env 2>/dev/null; then
+            sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=$new_key|" .env
+        else
+            echo "GROQ_API_KEY=$new_key" >> .env
+        fi
+        export GROQ_API_KEY="$new_key"
+        echo -e "\n${GREEN}[✓] GROQ_API_KEY atualizada com sucesso no arquivo .env!${NC}"
+    else
+        echo -e "\n${DIM}[i] Nenhuma alteração feita.${NC}"
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -117,10 +172,11 @@ show_menu() {
     echo -e "  ${GREEN}3)${NC} 📊 Run Comparative Benchmark (Baseline vs Advanced on 20 Cases)"
     echo -e "  ${GREEN}4)${NC} 🌐 Review Custom Git Repository (Take-Home / GitHub URL / PR)"
     echo -e "  ${GREEN}5)${NC} 📜 Inspect Trajectories & Trace Dossiers in Terminal"
-    echo -e "  ${GREEN}6)${NC} 🧪 Run Automated Pytest Test Suite"
-    echo -e "  ${GREEN}7)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
-    echo -e "  ${GREEN}8)${NC} 🔄 Reinstall / Sync Virtualenv Dependencies"
-    echo -e "  ${GREEN}9)${NC} 🧹 Clean temporary files, caches and test traces"
+    echo -e "  ${GREEN}6)${NC} 🔑 Configure / Update GROQ_API_KEY & LLM Settings (.env)"
+    echo -e "  ${GREEN}7)${NC} 🧪 Run Automated Pytest Test Suite"
+    echo -e "  ${GREEN}8)${NC} 🌐 Launch Django Web Dashboard (${BLUE}http://127.0.0.1:8000${NC})"
+    echo -e "  ${GREEN}9)${NC} 🔄 Reinstall / Sync Virtualenv Dependencies"
+    echo -e "  ${GREEN}10)${NC} 🧹 Clean temporary files, caches and test traces"
     echo -e "  ${RED}0)${NC} 🚪 Exit"
     echo ""
 }
@@ -361,6 +417,7 @@ show_cli_help() {
     echo -e "  ${GREEN}traces${NC}                     Inspect latest trajectory reports and dossiers"
     echo -e "  ${GREEN}setup / install${NC}            Initialize virtualenv and install dependencies"
     echo -e "  ${GREEN}clean${NC}                      Clean caches and temporary files"
+    echo -e "  ${GREEN}key / config / env${NC}         Configure or update GROQ_API_KEY in .env"
     echo -e "  ${GREEN}help / --help / -h${NC}         Display this help message"
     echo ""
 }
@@ -390,6 +447,9 @@ if [ $# -gt 0 ]; then
         traces|trace|trajectory|trajectories)
             inspect_traces_action
             ;;
+        key|keys|config|env)
+            configure_keys_action
+            ;;
         test|tests|pytest)
             run_tests_action "$@"
             ;;
@@ -418,7 +478,7 @@ fi
 while true; do
     show_header
     show_menu
-    read -p "Enter choice [0-9]: " choice
+    read -p "Enter choice [0-10]: " choice
     echo ""
 
     case "$choice" in
@@ -448,21 +508,26 @@ while true; do
             read -p "Press [Enter] to continue..."
             ;;
         6)
-            run_tests_action
+            configure_keys_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
         7)
-            run_dashboard_action
+            run_tests_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
         8)
-            reinstall_deps_action
+            run_dashboard_action
             echo ""
             read -p "Press [Enter] to continue..."
             ;;
         9)
+            reinstall_deps_action
+            echo ""
+            read -p "Press [Enter] to continue..."
+            ;;
+        10)
             clean_action
             echo ""
             read -p "Press [Enter] to continue..."
@@ -472,7 +537,7 @@ while true; do
             exit 0
             ;;
         *)
-            echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 9.${NC}"
+            echo -e "${RED}Invalid option '$choice'. Please choose between 0 and 10.${NC}"
             sleep 1
             ;;
     esac
