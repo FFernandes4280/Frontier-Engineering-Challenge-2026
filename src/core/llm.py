@@ -48,6 +48,7 @@ def validate_api_keys() -> str:
         ("GROQ_API_KEY", "Groq Cloud"),
         ("OPENAI_API_KEY", "OpenAI"),
         ("ANTHROPIC_API_KEY", "Anthropic")
+        ("GROQ_API_KEY", "Groq Cloud")
     ]:
         val = os.getenv(key_var)
         if val and not val.startswith("your_") and not val.startswith("optional_") and len(val.strip()) > 10:
@@ -90,23 +91,28 @@ class LLMClient:
         # 1. Normalize and prioritize requested model
         req = requested_model.lower().strip()
         if "flash-lite" in req or "20b" in req or "8b" in req:
+        if "flash-lite" in req or "-20b" in req or "-8b" in req:
             # Agile / lightweight tier
             if has_gemini:
                 candidates.extend(["gemini/gemini-flash-lite-latest", "gemini/gemini-3.5-flash-lite"])
             if has_groq:
                 candidates.extend(["groq/llama-3.1-8b-instant", "groq/openai/gpt-oss-20b"])
+                candidates.extend(["groq/openai/gpt-oss-20b", "groq/llama-3.1-8b-instant"])
         else:
             # Frontier / heavy tier (default)
             if has_gemini:
                 candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-3.6-flash"])
             if has_groq:
                 candidates.extend(["groq/llama-3.3-70b-versatile", "groq/openai/gpt-oss-120b"])
+                candidates.extend(["groq/openai/gpt-oss-120b", "groq/llama-3.3-70b-versatile"])
 
         # Fallback pool
         if has_gemini:
             candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-flash-lite-latest", "gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash-lite"])
+            candidates.extend(["gemini/gemini-flash-latest", "gemini/gemini-flash-lite-latest"])
         if has_groq:
             candidates.extend(["groq/llama-3.3-70b-versatile", "groq/llama-3.1-8b-instant"])
+            candidates.extend(["groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-20b"])
 
         # Deduplicate preserving order
         return list(dict.fromkeys(candidates))
